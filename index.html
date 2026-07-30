@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>実地棚卸支援ツール</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --text:#1c2331; --muted:#6b7280;
+    --accent:#2563eb; --accent-dark:#1d4ed8; --border:#e2e5ea;
+    --danger:#dc2626; --danger-bg:#fde8e8; --ok:#16a34a; --ok-bg:#e7f7ec;
+    --warn-bg:#fff7e6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#14181f; --card:#1d232d; --text:#e7ebf1; --muted:#9aa4b2;
+      --accent:#4f8cff; --accent-dark:#3f74e0; --border:#2c3441;
+      --danger:#ef4444; --danger-bg:#3a1f22; --ok:#34d399; --ok-bg:#173226;
+      --warn-bg:#332a12;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:640px;margin:0 auto;padding:16px 16px 100px;}
+  h1{font-size:1.3rem;margin:0 0 4px;}
+  h2{font-size:1.1rem;margin:0 0 12px;}
+  p.note{color:var(--text);font-size:0.85rem;line-height:1.6;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:14px 18px;font-size:1rem;font-weight:600;cursor:pointer;width:100%;min-height:48px;}
+  .btn:active{background:var(--accent-dark);}
+  .btn.secondary{background:transparent;color:var(--accent);border:1.5px solid var(--accent);}
+  .btn.small{width:auto;padding:8px 14px;font-size:0.85rem;min-height:38px;}
+  .btn.danger{background:var(--danger);}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn-row{display:flex;gap:8px;}
+  .btn-row .btn{flex:1;}
+  input[type=text], input[type=number], input[type=url], select, textarea{
+    width:100%;padding:12px;border:1.5px solid var(--border);border-radius:8px;font-size:1rem;
+    background:var(--card);color:var(--text);margin-bottom:10px;
+  }
+  label.field-label{display:block;font-size:0.85rem;color:var(--muted);margin-bottom:4px;font-weight:600;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+  .choice-card{display:flex;align-items:center;gap:14px;padding:18px;border:1.5px solid var(--border);border-radius:12px;margin-bottom:12px;cursor:pointer;background:var(--card);}
+  .choice-card:active{border-color:var(--accent);}
+  .choice-card .emoji{font-size:1.8rem;}
+  .choice-card .txt b{display:block;font-size:1.05rem;}
+  .choice-card .txt span{color:var(--muted);font-size:0.85rem;}
+  .step-indicator{display:flex;gap:6px;margin-bottom:16px;}
+  .step-indicator div{flex:1;height:4px;background:var(--border);border-radius:2px;}
+  .step-indicator div.done{background:var(--accent);}
+  table.map-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+  table.map-table th, table.map-table td{border-bottom:1px solid var(--border);padding:8px 4px;text-align:left;}
+  table.map-table select{margin-bottom:0;padding:6px;font-size:0.85rem;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:0.75rem;font-weight:600;}
+  .badge.ok{background:var(--ok-bg);color:var(--ok);}
+  .badge.warn{background:var(--warn-bg);color:#92680a;}
+  .warn-banner{background:var(--warn-bg);border:1.5px solid #92680a;color:#92680a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:0.85rem;font-weight:700;text-align:center;}
+  .badge.danger{background:var(--danger-bg);color:var(--danger);}
+  #qr-canvas{display:block;margin:16px auto;}
+  .link-box{word-break:break-all;font-size:0.8rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px;}
+  .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:8px;font-size:0.9rem;z-index:100;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .toast.show{opacity:1;}
+
+  /* カウント担当者：一覧・入力 */
+  .progress-line{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:0.9rem;color:var(--muted);}
+  .search-box{margin-bottom:10px;}
+  .item-row{border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;background:var(--card);}
+  .item-row.touched{border-color:var(--ok);}
+  .item-row .row-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+  .item-row .row-head .name{font-weight:600;}
+  .item-row .row-head .key{color:var(--muted);font-size:0.8rem;}
+  .item-row .check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.8rem;}
+  .item-row.touched .check{background:var(--ok);border-color:var(--ok);color:#fff;}
+  .item-row .expand{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);}
+  .item-row.expanded .expand{display:block;}
+  .item-row.expanded{border-color:var(--accent);}
+  .big-name{font-size:1.3rem;font-weight:700;margin-bottom:2px;}
+  .big-key{color:var(--muted);font-size:0.9rem;margin-bottom:14px;}
+  .qty-control{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .qty-control button{width:52px;height:52px;font-size:1.6rem;border-radius:12px;border:none;background:var(--accent);color:#fff;flex-shrink:0;}
+  .qty-control input{text-align:center;font-size:1.4rem;font-weight:700;margin-bottom:0;padding:12px 4px;}
+  .fab-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:8px;z-index:50;}
+  .fab-bottom .wrap-inner{max-width:640px;margin:0 auto;width:100%;display:flex;gap:8px;}
+
+  /* 仕組み図 */
+  .flow-diagram{display:flex;flex-direction:column;align-items:stretch;gap:2px;}
+  .flow-box{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;font-weight:600;font-size:0.9rem;}
+  .flow-box-tool{border-color:var(--accent);background:var(--ok-bg);}
+  .flow-sub{display:block;font-weight:400;color:var(--muted);font-size:0.75rem;margin-top:2px;}
+  .flow-arrow{text-align:center;font-size:0.75rem;color:var(--muted);padding:4px 8px;line-height:1.4;}
+  .flow-scope{border:2px dashed var(--accent);border-radius:14px;padding:10px 10px 4px;margin:6px 0;position:relative;display:flex;flex-direction:column;gap:2px;}
+  .flow-scope-label{position:absolute;top:-11px;left:12px;background:var(--card);padding:0 8px;font-size:0.7rem;font-weight:700;color:var(--accent);}
+
+  /* カウント担当者：名前表示バー */
+  .counter-name-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:0.85rem;}
+  .counter-name-bar .name{font-weight:600;}
+  .counter-name-bar button{background:none;border:none;color:var(--accent);text-decoration:underline;font-size:0.8rem;cursor:pointer;padding:0;}
+
+  /* セットアップ手順 */
+  .setup-steps{padding-left:20px;margin:0;}
+  .setup-steps > li{margin-bottom:16px;line-height:1.6;}
+  .setup-steps ul{margin-top:6px;padding-left:18px;font-size:0.85rem;color:var(--muted);}
+  .setup-steps ul li{margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="wrap">
+
+  <!-- ============ ホーム：役割選択 ============ -->
+  <div class="screen active" id="screen-home">
+    <h1>📋 実地棚卸支援ツール</h1>
+    <p class="note">複数人が同時にスマホからカウントし、集めた結果を取り込んだ在庫リストと同じ形のまま出力する、実地棚卸をまるごとサポートするツールです。</p>
+    <div class="card">
+      <h2>データの流れ</h2>
+      <div class="flow-diagram">
+        <div class="flow-box">📊 在庫管理システム<span class="flow-sub">（各社独自・本ツールの対象外）</span></div>
+        <div class="flow-arrow">↓ 在庫リストを書き出し（CSV/Excel）</div>
+        <div class="flow-scope">
+          <span class="flow-scope-label">本ツールの対象範囲</span>
+          <div class="flow-box flow-box-tool">🗂️ htmlファイル（棚卸ツール本体）<span class="flow-sub">全社共通で公開・データはここに保存されない</span></div>
+          <div class="flow-arrow">↓ 管理者が取込・送信 ／ カウント担当者がスマホで入力・送信</div>
+          <div class="flow-box">📗 Googleスプレッドシート<span class="flow-sub">各社自身のGoogleアカウント内・元データ／マスタ／回答／集計／最終リスト／最終（元レイアウト）</span></div>
+        </div>
+        <div class="flow-arrow">↓「最終（元レイアウト）」をCSV等で出力・ダウンロード</div>
+        <div class="flow-box">📊 在庫管理システムへ反映<span class="flow-sub">（各社独自・本ツールの対象外）</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>作成者からのメッセージ</h2>
+      <p class="note">
+        実地棚卸を、紙のリストを作って配って回収してカウント結果をシステムに入力する、何年もこんな業務をやっている方、いると思います。<br>
+        とはいえ、予算がなかったり、ツールを自作する能力がなかったりでやむなく現状維持が続いていませんか？<br>
+        作成者がまさにそうでした。
+        <br><br>
+        本ツールでは、元データとして在庫リスト取込→棚卸リスト作成→スマホでカウント結果入力・送信→スプレッドシートでカウント結果を回収→成果物として在庫リスト（数量がカウント結果に置換）出力、までを行えます。<br>
+        実地棚卸を管轄している事務担当者の負担を減らすことができると思います。
+        <br><br>
+        自己責任が大前提ですが、無料で自由にお使い頂けます。
+        <br><br>
+        安くて手軽なツールを探している方、ぜひお試しください。
+      </p>
+    </div>
+    <button class="btn" onclick="showScreen('screen-start')">利用を開始する</button>
+  </div>
+
+  <!-- ============ 利用開始：役割選択 ============ -->
+  <div class="screen" id="screen-start">
+    <h1>📋 実地棚卸支援ツール</h1>
+    <div class="card">
+      <h2>利用を開始する</h2>
+      <div class="choice-card" onclick="goAdminStart()">
+        <div class="emoji">🗂️</div>
+        <div class="txt"><b>①管理者として設定する（まずはここから）</b><span>在庫リストの取込・棚卸の準備をします</span></div>
+      </div>
+      <div class="choice-card" onclick="goCounterStart()">
+        <div class="emoji">📱</div>
+        <div class="txt"><b>②カウント担当者として入力する</b><span>実地でカウントした数量を入力します</span></div>
+      </div>
+      <p class="note">※ カウント担当者は通常、管理者から共有されたリンクやQRコードを開くと自動でこの画面を飛ばして入力画面に進みます。上のボタンはリンクを手入力する場合のみ使用します。</p>
+    </div>
+    <button class="btn secondary" onclick="showScreen('screen-home')">戻る</button>
+  </div>
+
+  <!-- ============ 管理者：GAS接続 ============ -->
+  <div class="screen" id="screen-admin-connect">
+    <h1>🗂️ 管理者設定</h1>
+    <div class="step-indicator"><div class="done"></div><div></div><div></div><div></div></div>
+    <div class="card">
+      <h2>①ウェブアプリURLを取得する</h2>
+      <p class="note">カウント結果の集計先となる、Googleスプレッドシート＋GASスクリプトを準備します。</p>
+      <ol class="setup-steps">
+        <li>新しいGoogleスプレッドシートを作成する</li>
+        <li>メニュー「拡張機能」→「Apps Script」を開く</li>
+        <li>
+          デフォルトで入っているコードを全部消し、下のコードを貼り付けて保存する（Ctrl+S）
+          <details style="margin-top:8px;">
+            <summary style="cursor:pointer;font-weight:600;color:var(--accent);">▶ GASスクリプトのコードを表示・コピーする</summary>
+            <textarea id="gas-code-box" readonly style="width:100%;height:260px;font-family:monospace;font-size:0.75rem;white-space:pre;">// ============================================================
+// 実地棚卸支援ツール - GASテンプレート
+// ============================================================
+// 【使い方】
+// 1. 新しいGoogleスプレッドシートを作成する
+// 2. メニュー「拡張機能」→「Apps Script」を開く
+// 3. デフォルトで入っているコードを全部消し、このファイルの中身を
+//    全部貼り付けて保存する（フロッピーアイコン、またはCtrl+S）
+// 4. 右上の「デプロイ」→「新しいデプロイ」をクリック
+//    - 種類の選択：歯車アイコン→「ウェブアプリ」
+//    - 説明：任意（例：棚卸2026）
+//    - 次のユーザーとして実行：自分
+//    - アクセスできるユーザー：全員
+//    →「デプロイ」をクリック
+// 5. 初回のみ権限の承認を求められるので許可する
+//    （「このアプリは Google で確認されていません」と出た場合は
+//     「詳細」→「安全ではないページに移動」で進めて問題ありません。
+//     これは自分自身が作成したスクリプトのため安全です）
+// 6. 表示された「ウェブアプリのURL」をコピーし、
+//    棚卸ツール（管理者モード）の設定画面に貼り付ける
+//
+// シートやその中の見出し・数式は、ツール側から取込データを送った時点で
+// 自動的に作成・更新されます。あらかじめシートを手作業で用意する必要は
+// ありません。コードを更新した場合は、既存のデプロイに対して
+// 「デプロイを管理」→「新バージョン」で反映させてください
+// （コードの保存だけでは、公開中のURLには反映されません）。
+// ============================================================
+
+const SHEET_GUIDE = '使い方';
+const SHEET_MASTER = 'マスタ';
+const SHEET_ANSWERS = '回答';
+const SHEET_SUMMARY = '集計';
+const SHEET_FINAL = '最終リスト';
+const SHEET_ORIGINAL = '元データ';
+const SHEET_FINAL_ORIGINAL = '最終（元レイアウト）';
+
+// ---------------- ヘッダー定義（軸の数に応じて可変） ----------------
+
+function masterHeader_(axisLabels) {
+  return ['識別キー', '表示名'].concat(axisLabels).concat(['帳簿数量', '元データ(JSON)']);
+}
+function answersHeader_(axisLabels) {
+  return ['タイムスタンプ', '担当者名', '識別キー'].concat(axisLabels).concat(['数量', '場所メモ']);
+}
+function summaryHeader_(axisLabels) {
+  return ['識別キー'].concat(axisLabels).concat(['表示名', '帳簿数量', '実地数（合算）', '入力件数', '表示用実地数', '差異', '内訳（担当者:数量(メモ)）', '管理者上書き', '上書き理由', '最終実地数']);
+}
+function finalHeader_(axisLabels) {
+  return ['識別キー', '表示名'].concat(axisLabels).concat(['最終数量']);
+}
+
+// ---------------- エントリーポイント ----------------
+
+function doGet(e) {
+  try {
+    const action = e.parameter.action;
+    if (action === 'ping') {
+      return jsonOut({ ok: true });
+    }
+    if (action === 'getMaster') {
+      return jsonOut({ ok: true, items: getMasterData(), config: getConfig() });
+    }
+    if (action === 'getConfig') {
+      return jsonOut({ ok: true, config: getConfig() });
+    }
+    return jsonOut({ ok: false, error: 'unknown action: ' + action });
+  } catch (err) {
+    return jsonOut({ ok: false, error: String(err) });
+  }
+}
+
+function doPost(e) {
+  try {
+    const body = JSON.parse(e.postData.contents);
+    const action = body.action;
+    if (action === 'setup') {
+      return jsonOut(setupMaster(body));
+    }
+    if (action === 'submitCounts') {
+      return jsonOut(submitCounts(body));
+    }
+    return jsonOut({ ok: false, error: 'unknown action: ' + action });
+  } catch (err) {
+    return jsonOut({ ok: false, error: String(err) });
+  }
+}
+
+function jsonOut(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ---------------- 初期化 ----------------
+
+function ensureSheetsExist() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const axisLabels = getAxisLabels_();
+  writeUsageGuideSheet_();
+  ensureSheet_(ss, SHEET_MASTER, masterHeader_(axisLabels));
+  ensureSheet_(ss, SHEET_ANSWERS, answersHeader_(axisLabels));
+  ensureSheet_(ss, SHEET_SUMMARY, summaryHeader_(axisLabels));
+  ensureSheet_(ss, SHEET_FINAL, finalHeader_(axisLabels));
+  // 元データ・最終（元レイアウト）は元ファイルのヘッダーが分かってから作成する（setupMaster内）
+}
+
+// 「使い方」シート：管理者がスプレッドシート上で何を確認・操作すればよいかを、
+// 時系列・自動/手動の別が分かる形でまとめる。内容は固定なので、毎回上書きして最新版に揃える。
+function writeUsageGuideSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(SHEET_GUIDE);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_GUIDE);
+    sh.setFrozenRows(1);
+  }
+
+  const header = ['No.', '区分', '担当', '作業場所', '内容'];
+  const COLS = header.length;
+
+  // セクション見出し行は、作成者メッセージで謳っている「まるごとサポート」の
+  // 5パート（棚卸リスト作成／配付／カウント／回収／カウント結果入力）との対応を示す。
+  // カウント・回収・結果入力は、送信と同時に自動完了するため1セクションに統合している。
+  const items = [
+    { section: '棚卸リスト作成' },
+    { row: ['1', '手動', '管理者', '実地棚卸支援ツール', '在庫リストを取込み、列（識別キー・表示名・軸・帳簿数量）を指定する。プレビュー画面で件数・帳簿数量の合計が元データと一致するか確認してから送信する'] },
+    { row: ['1-1', '自動', 'システム', 'マスタ／元データ', 'シートが作成され、取り込んだデータが保存される'] },
+    { row: ['1-2', '自動', 'システム', '集計／最終リスト／最終（元レイアウト）', 'シートが作成され、差異・最終結果が計算される'] },
+    { section: '棚卸リスト配付' },
+    { row: ['2', '手動', '管理者', '実地棚卸支援ツール', '発行されたQRコード・リンクをカウント担当者に共有する（印刷・PDF保存推奨）'] },
+    { section: 'カウント／棚卸リスト回収／カウント結果入力（送信と同時に自動完了）' },
+    { row: ['3', '手動', 'カウント担当者', '実地棚卸支援ツール', 'QR・リンクを開き、名前を入力→担当（ロケーション等）を選択→実地でカウントした数量を入力して送信する'] },
+    { row: ['3-1', '自動', 'システム', '回答', '入力内容が追記される'] },
+    { row: ['3-2', '自動', 'システム', '集計', '再計算され、帳簿数量と実地数が異なる行が赤く強調表示される'] },
+    { section: '棚卸差異の確認' },
+    { row: ['4', '手動', '管理者', '集計', '差異のある品目は「内訳」列（誰が・いつ・どんなメモで入力したか）を見て、重複入力なのか、本当に複数箇所にあった（分散カウント）のかを判断する'] },
+    { row: ['5', '手動', '管理者', '集計', '是正が必要な場合、該当行の「管理者上書き」に確定数量を、「上書き理由」に理由を入力する（現場での再確認が必要な場合もある）'] },
+    { row: ['6', '手動', '管理者', 'スプレッドシートのメニュー', '「棚卸ツール→🔄 集計を再計算」を実行し、上書き内容を反映させる（上書き入力だけでは自動反映されないため必須）'] },
+    { row: ['6-1', '自動', 'システム', '集計／最終リスト／最終（元レイアウト）', '上書き内容を反映して再計算される'] },
+    { section: '棚卸結果の出力・ダウンロード' },
+    { row: ['7', '手動', '管理者', '最終（元レイアウト）', 'CSV等で出力・ダウンロードし、在庫管理システムへ反映する'] }
+  ];
+
+  sh.clear();
+
+  sh.getRange(1, 1, 1, COLS).setValues([header]).setFontWeight('bold');
+  sh.getRange(1, 1, 1, COLS).setBackground('#e2e5ea');
+
+  let r = 2;
+  items.forEach(function (item) {
+    if (item.section) {
+      // セルの結合はせず、行全体を色付けしてA列にラベルを入れるだけにする
+      sh.getRange(r, 1, 1, COLS).setBackground('#2563eb');
+      sh.getRange(r, 1).setValue(item.section).setFontWeight('bold').setFontColor('#ffffff');
+    } else {
+      sh.getRange(r, 1, 1, COLS).setValues([item.row]);
+      if (item.row[1] === '手動') {
+        sh.getRange(r, 1, 1, COLS).setBackground('#fff7e6');
+      }
+    }
+    r++;
+  });
+  const totalRows = r - 1;
+  sh.getRange(2, 1, totalRows - 1, 1).setNumberFormat('@'); // No.列は"1-1"等の混在を統一して文字列表示にする
+
+  sh.setColumnWidth(1, 40);
+  sh.setColumnWidth(2, 60);
+  sh.setColumnWidth(3, 110);
+  sh.setColumnWidth(4, 220);
+  sh.setColumnWidth(5, 480);
+  sh.getRange(2, 4, totalRows - 1, 1).setWrap(true);
+  sh.getRange(2, 5, totalRows - 1, 1).setWrap(true);
+
+  trimSheet_(sh, totalRows, COLS);
+}
+
+function ensureSheet_(ss, name, header) {
+  let sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name);
+    sh.setFrozenRows(1);
+  }
+  // 既存シートでも、コード側の見出し定義が変わった場合に追従できるよう毎回上書きする
+  sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
+  return sh;
+}
+
+// 見出し+データで使っている行・列数を超える分を削除し、見た目を整える
+function trimSheet_(sh, usedRows, usedCols) {
+  if (sh.getMaxRows() &gt; usedRows) sh.deleteRows(usedRows + 1, sh.getMaxRows() - usedRows);
+  if (sh.getMaxColumns() &gt; usedCols) sh.deleteColumns(usedCols + 1, sh.getMaxColumns() - usedCols);
+}
+
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('棚卸ツール')
+    .addItem('🔄 集計を再計算', 'recomputeSummary')
+    .addToUi();
+}
+
+// ---------------- 設定の保存・読み出し ----------------
+
+function getAxisLabels_() {
+  const raw = PropertiesService.getScriptProperties().getProperty('axisLabels');
+  return raw ? JSON.parse(raw) : [];
+}
+function getOriginalHeaders_() {
+  const raw = PropertiesService.getScriptProperties().getProperty('originalHeaders');
+  return raw ? JSON.parse(raw) : [];
+}
+function getAxisColIndices_() {
+  const raw = PropertiesService.getScriptProperties().getProperty('axisColIndices');
+  return raw ? JSON.parse(raw) : [];
+}
+function getBookQtyColIndex_() {
+  const raw = PropertiesService.getScriptProperties().getProperty('bookQtyColIndex');
+  return (raw !== null &amp;&amp; raw !== undefined &amp;&amp; raw !== '') ? Number(raw) : -1;
+}
+
+function getConfig() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    keyLabel: props.getProperty('keyLabel') || '識別キー',
+    displayLabel: props.getProperty('displayLabel') || '表示名',
+    axisLabels: getAxisLabels_()
+  };
+}
+
+// ---------------- マスタ取込 ----------------
+
+// body = {
+//   action:'setup',
+//   config:{keyLabel, displayLabel, axisLabels:[...]},
+//   items:[{key, display, axes:[...], bookQty, originalRow:[...]}],
+//   originalHeaders:[...], originalRows:[[...], ...],
+//   axisColIndices:[...], bookQtyColIndex: number
+// }
+function setupMaster(body) {
+  const cfg = body.config || {};
+  const axisLabels = cfg.axisLabels || [];
+
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('keyLabel', cfg.keyLabel || '識別キー');
+  props.setProperty('displayLabel', cfg.displayLabel || '表示名');
+  props.setProperty('axisLabels', JSON.stringify(axisLabels));
+  props.setProperty('originalHeaders', JSON.stringify(body.originalHeaders || []));
+  props.setProperty('axisColIndices', JSON.stringify(body.axisColIndices || []));
+  props.setProperty('bookQtyColIndex', String(body.bookQtyColIndex != null ? body.bookQtyColIndex : -1));
+
+  // シートの並び順を「元データ→マスタ→回答→集計→最終リスト→最終（元レイアウト）」にするため、
+  // 元データを先に作成しておく
+  writeOriginalDataSheet_(body.originalHeaders || [], body.originalRows || []);
+
+  ensureSheetsExist();
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(SHEET_MASTER);
+  const header = masterHeader_(axisLabels);
+  const lastRow = sh.getLastRow();
+  if (lastRow &gt; 1) {
+    sh.getRange(2, 1, lastRow - 1, header.length).clearContent();
+  }
+
+  const items = body.items || [];
+  const rows = items.map(function (it) {
+    const axes = it.axes || [];
+    return [it.key, it.display].concat(axes).concat([Number(it.bookQty) || 0, JSON.stringify(it.originalRow || [])]);
+  });
+  if (rows.length &gt; 0) {
+    sh.getRange(2, 1, rows.length, header.length).setValues(rows);
+  }
+  trimSheet_(sh, rows.length + 1, header.length);
+
+  recomputeSummary();
+  return { ok: true, count: rows.length };
+}
+
+function getMasterData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(SHEET_MASTER);
+  if (!sh) return [];
+  const axisLabels = getAxisLabels_();
+  const n = axisLabels.length;
+  const headerLen = masterHeader_(axisLabels).length;
+  const lastRow = sh.getLastRow();
+  if (lastRow &lt; 2) return [];
+  const values = sh.getRange(2, 1, lastRow - 1, headerLen).getValues();
+  return values
+    .filter(function (r) { return r[0] !== '' &amp;&amp; r[0] !== null; })
+    .map(function (r) {
+      return { key: r[0], display: r[1], axes: r.slice(2, 2 + n), bookQty: r[2 + n] };
+    });
+}
+
+function writeOriginalDataSheet_(originalHeaders, originalRows) {
+  if (!originalHeaders || originalHeaders.length === 0) return;
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ensureSheet_(ss, SHEET_ORIGINAL, originalHeaders);
+  const clearRows = sh.getMaxRows() - 1;
+  if (clearRows &gt; 0) sh.getRange(2, 1, clearRows, originalHeaders.length).clearContent();
+  if (originalRows.length &gt; 0) sh.getRange(2, 1, originalRows.length, originalHeaders.length).setValues(originalRows);
+  trimSheet_(sh, originalRows.length + 1, originalHeaders.length);
+}
+
+// ---------------- カウント結果の受付 ----------------
+
+// body = { action:'submitCounts', name:'担当者名', items:[{key, axes:[...], qty, memo}, ...] }
+function submitCounts(body) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    ensureSheetsExist();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName(SHEET_ANSWERS);
+    const axisLabels = getAxisLabels_();
+    const header = answersHeader_(axisLabels);
+    const now = new Date();
+    const name = body.name || '';
+    const items = body.items || [];
+    const rows = items.map(function (it) {
+      const axes = it.axes || [];
+      return [now, name, it.key].concat(axes).concat([Number(it.qty) || 0, it.memo || '']);
+    });
+    if (rows.length &gt; 0) {
+      sh.getRange(sh.getLastRow() + 1, 1, rows.length, header.length).setValues(rows);
+    }
+    trimSheet_(sh, Math.max(sh.getLastRow(), 1), header.length);
+    // 集計の再計算もロックを保持したまま行う（複数端末の同時送信による競合を避けるため）
+    try { recomputeSummary(); } catch (e) { /* 集計失敗しても回答は保存済みなので握りつぶす */ }
+    return { ok: true, count: rows.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ---------------- 集計の再計算 ----------------
+// マスタと回答、両方に登場する(識別キー,軸1..軸N)の組み合わせを全て拾い、
+// 帳簿数量・実地数（合算）・入力件数・差異を算出してシートへ書き込む。
+// 「管理者上書き」「上書き理由」は既存の値を保持する。
+// 併せて「最終リスト」「最終（元レイアウト）」も更新する。
+
+function recomputeSummary() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureSheetsExist();
+  const axisLabels = getAxisLabels_();
+  const n = axisLabels.length;
+
+  const masterSh = ss.getSheetByName(SHEET_MASTER);
+  const ansSh = ss.getSheetByName(SHEET_ANSWERS);
+  const sumSh = ss.getSheetByName(SHEET_SUMMARY);
+
+  const masterHeaderLen = masterHeader_(axisLabels).length;
+  const masterLast = masterSh.getLastRow();
+  const masterRows = masterLast &gt; 1 ? masterSh.getRange(2, 1, masterLast - 1, masterHeaderLen).getValues() : [];
+  trimSheet_(masterSh, Math.max(masterLast, 1), masterHeaderLen);
+
+  const ansHeaderLen = answersHeader_(axisLabels).length;
+  const ansLast = ansSh.getLastRow();
+  const ansRows = ansLast &gt; 1 ? ansSh.getRange(2, 1, ansLast - 1, ansHeaderLen).getValues() : [];
+  trimSheet_(ansSh, Math.max(ansLast, 1), ansHeaderLen);
+
+  const originalHeadersForTrim = getOriginalHeaders_();
+  if (originalHeadersForTrim.length &gt; 0) {
+    const origSh = ss.getSheetByName(SHEET_ORIGINAL);
+    if (origSh) trimSheet_(origSh, Math.max(origSh.getLastRow(), 1), originalHeadersForTrim.length);
+  }
+
+  const sumHeaderLen = summaryHeader_(axisLabels).length;
+  const sumLast = sumSh.getLastRow();
+  const oldSumRows = sumLast &gt; 1 ? sumSh.getRange(2, 1, sumLast - 1, sumHeaderLen).getValues() : [];
+
+  // 集計シートの列位置（軸の数nに応じて可変）
+  const idx = {
+    idKey: 0,
+    axisStart: 1,
+    display: n + 1,
+    bookQty: n + 2,
+    actualSum: n + 3,
+    inputCount: n + 4,
+    displayActual: n + 5,
+    diff: n + 6,
+    breakdown: n + 7,
+    override: n + 8,
+    reason: n + 9,
+    finalQty: n + 10
+  };
+
+  // 既存の管理者上書き・理由を保持
+  const overrideMap = {};
+  oldSumRows.forEach(function (r) {
+    const axes = r.slice(idx.axisStart, idx.axisStart + n);
+    const k = combineKey_(r[idx.idKey], axes);
+    overrideMap[k] = { override: r[idx.override], reason: r[idx.reason] };
+  });
+
+  // マスタ側キー: [識別キー, 表示名, 軸(n), 帳簿数量, 元データ(JSON)]
+  const bookMap = {};
+  masterRows.forEach(function (r) {
+    if (r[0] === '' || r[0] === null) return;
+    const axes = r.slice(2, 2 + n);
+    const bookQty = Number(r[2 + n]) || 0;
+    const key = combineKey_(r[0], axes);
+    bookMap[key] = { idKey: r[0], display: r[1], axes: axes, bookQty: bookQty };
+  });
+
+  // 回答側の合算（担当者名・メモも内訳表示用に保持）: [タイムスタンプ, 担当者名, 識別キー, 軸(n), 数量, メモ]
+  const ansAgg = {};
+  ansRows.forEach(function (r) {
+    const name = r[1], idKey = r[2];
+    const axes = r.slice(3, 3 + n);
+    const qty = Number(r[3 + n]) || 0;
+    const memo = r[3 + n + 1] || '';
+    if (idKey === '' || idKey === null) return;
+    const key = combineKey_(idKey, axes);
+    if (!ansAgg[key]) ansAgg[key] = { sum: 0, count: 0, idKey: idKey, axes: axes, details: [] };
+    ansAgg[key].sum += qty;
+    ansAgg[key].count += 1;
+    ansAgg[key].details.push({ name: name, qty: qty, memo: memo });
+  });
+
+  const allKeys = {};
+  Object.keys(bookMap).forEach(function (k) { allKeys[k] = true; });
+  Object.keys(ansAgg).forEach(function (k) { allKeys[k] = true; });
+
+  const outRows = [];
+  Object.keys(allKeys).forEach(function (key) {
+    const book = bookMap[key];
+    const ans = ansAgg[key];
+    const idKey = book ? book.idKey : ans.idKey;
+    const display = book ? book.display : '';
+    const axes = book ? book.axes : ans.axes;
+    const bookQty = book ? book.bookQty : 0;
+    const actualSum = ans ? ans.sum : 0;
+    const inputCount = ans ? ans.count : 0;
+    const displayActual = inputCount === 0 ? bookQty : actualSum;
+    const diff = displayActual - bookQty;
+
+    const prev = overrideMap[key] || {};
+    const override = (prev.override === undefined || prev.override === null) ? '' : prev.override;
+    const reason = prev.reason || '';
+    const finalQty = (override !== '') ? Number(override) : displayActual;
+    const breakdown = buildBreakdown_(ans);
+
+    const row = [idKey].concat(axes).concat([display, bookQty, actualSum, inputCount, displayActual, diff, breakdown, override, reason, finalQty]);
+    outRows.push(row);
+  });
+
+  outRows.sort(function (a, b) { return Math.abs(b[idx.diff]) - Math.abs(a[idx.diff]); });
+
+  const clearRows = sumSh.getMaxRows() - 1;
+  if (clearRows &gt; 0) {
+    sumSh.getRange(2, 1, clearRows, sumHeaderLen).clearContent();
+  }
+  if (outRows.length &gt; 0) {
+    sumSh.getRange(2, 1, outRows.length, sumHeaderLen).setValues(outRows);
+  }
+  trimSheet_(sumSh, outRows.length + 1, sumHeaderLen);
+
+  applyConditionalFormatting_(sumSh, idx.diff, sumHeaderLen);
+  updateFinalList_(outRows, axisLabels, idx);
+  updateOriginalLayoutFinal_(outRows, axisLabels, idx);
+  reorderSheets_();
+}
+
+// シートのタブ順を「元データ→マスタ→回答→集計→最終リスト→最終（元レイアウト）」に揃える。
+// 既存のスプレッドシート（過去のバージョンで別順に作られたもの）でも、実行するたびに揃う。
+function reorderSheets_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const order = [SHEET_GUIDE, SHEET_ORIGINAL, SHEET_MASTER, SHEET_ANSWERS, SHEET_SUMMARY, SHEET_FINAL, SHEET_FINAL_ORIGINAL];
+  order.forEach(function (name, i) {
+    const sh = ss.getSheetByName(name);
+    if (sh) {
+      ss.setActiveSheet(sh);
+      ss.moveActiveSheet(i + 1);
+    }
+  });
+}
+
+function combineKey_(idKey, axes) {
+  function norm(v) { return (v === null || v === undefined) ? '' : String(v); }
+  return norm(idKey) + '|' + (axes || []).map(norm).join('|');
+}
+
+function buildBreakdown_(ans) {
+  if (!ans || !ans.details || ans.details.length === 0) return '';
+  return ans.details.map(function (d) {
+    let label = (d.name || '(名前なし)') + ':' + d.qty;
+    if (d.memo) label += '(' + d.memo + ')';
+    return label;
+  }).join(' / ');
+}
+
+function colLetter_(colNum1based) {
+  let s = '', n = colNum1based;
+  while (n &gt; 0) {
+    const m = (n - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+function applyConditionalFormatting_(sh, diffIdx, totalCols) {
+  sh.clearConditionalFormatRules();
+  const lastColLetter = colLetter_(totalCols);
+  const diffColLetter = colLetter_(diffIdx + 1);
+  const range = sh.getRange('A2:' + lastColLetter + '2000');
+  const rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$' + diffColLetter + '2&lt;&gt;0')
+    .setBackground('#fce8e6')
+    .setRanges([range])
+    .build();
+  sh.setConditionalFormatRules([rule]);
+}
+
+function updateFinalList_(outRows, axisLabels, idx) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(SHEET_FINAL);
+  const header = finalHeader_(axisLabels);
+  const clearRows = sh.getMaxRows() - 1;
+  if (clearRows &gt; 0) {
+    sh.getRange(2, 1, clearRows, header.length).clearContent();
+  }
+  const rows = outRows.map(function (r) {
+    const idKey = r[idx.idKey];
+    const axes = r.slice(idx.axisStart, idx.axisStart + axisLabels.length);
+    const display = r[idx.display];
+    const finalQty = r[idx.finalQty];
+    return [idKey, display].concat(axes).concat([finalQty]);
+  });
+  if (rows.length &gt; 0) {
+    sh.getRange(2, 1, rows.length, header.length).setValues(rows);
+  }
+  trimSheet_(sh, rows.length + 1, header.length);
+}
+
+// 元ファイルと同じレイアウトのまま、帳簿数量の列だけ最終実地数に置き換えたシートを作る。
+// 元の取込時に無かった（品番,軸）の組み合わせ（ロケーション不一致等で新規発見されたもの）は、
+// 同じ識別キーを持つ既存行（マスタに保存した元データJSON）を複製し、軸列と数量列だけ書き換えて追加する。
+function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const originalHeaders = getOriginalHeaders_();
+  if (!originalHeaders || originalHeaders.length === 0) return;
+  const sh = ensureSheet_(ss, SHEET_FINAL_ORIGINAL, originalHeaders);
+  const bookQtyColIndex = getBookQtyColIndex_();
+  const axisColIndices = getAxisColIndices_();
+
+  const masterSh = ss.getSheetByName(SHEET_MASTER);
+  const masterHeaderLen = masterHeader_(axisLabels).length;
+  const masterLast = masterSh.getLastRow();
+  const masterRows = masterLast &gt; 1 ? masterSh.getRange(2, 1, masterLast - 1, masterHeaderLen).getValues() : [];
+  const jsonColIdx = masterHeaderLen - 1;
+
+  // 識別キー -&gt; 元データ(JSON) のテンプレート（新規発見された組み合わせの複製元に使う）
+  const templateByKey = {};
+  masterRows.forEach(function (r) {
+    const idKey = r[0];
+    if (idKey === '' || idKey === null) return;
+    if (!templateByKey[idKey]) {
+      try { templateByKey[idKey] = JSON.parse(r[jsonColIdx]); } catch (e) { /* ignore */ }
+    }
+  });
+
+  const outSheetRows = [];
+  outRows.forEach(function (row) {
+    const idKey = row[idx.idKey];
+    const axes = row.slice(idx.axisStart, idx.axisStart + axisLabels.length);
+    const finalQty = row[idx.finalQty];
+    const template = templateByKey[idKey];
+    if (!template) return; // 元データが無い場合（元データ未設定等）はスキップ
+    const clone = template.slice();
+    axisColIndices.forEach(function (colIdx, i) {
+      if (colIdx &gt; -1 &amp;&amp; i &lt; axes.length) clone[colIdx] = axes[i];
+    });
+    if (bookQtyColIndex &gt; -1) clone[bookQtyColIndex] = finalQty;
+    outSheetRows.push(clone);
+  });
+
+  const clearRows = sh.getMaxRows() - 1;
+  if (clearRows &gt; 0) sh.getRange(2, 1, clearRows, originalHeaders.length).clearContent();
+  if (outSheetRows.length &gt; 0) sh.getRange(2, 1, outSheetRows.length, originalHeaders.length).setValues(outSheetRows);
+  trimSheet_(sh, outSheetRows.length + 1, originalHeaders.length);
+}
+</textarea>
+            <button type="button" class="btn secondary small" onclick="copyGasCode()">コードをコピー</button>
+          </details>
+          <p class="note">保存後、スプレッドシートを開き直す（開いたままの場合はブラウザをリロードする）と、メニューに「棚卸ツール」が追加されます。これはコードの保存だけで表示され、後述のデプロイとは関係ありません。</p>
+        </li>
+        <li>
+          右上の「デプロイ」→「新しいデプロイ」をクリック
+          <ul>
+            <li>種類の選択：歯車アイコン→「ウェブアプリ」</li>
+            <li>説明：任意（例：棚卸2026）</li>
+            <li>次のユーザーとして実行：自分</li>
+            <li>アクセスできるユーザー：全員</li>
+          </ul>
+          →「デプロイ」をクリック
+        </li>
+        <li>
+          初回のみ権限の承認を求められるので許可する
+          <p class="note">「このアプリは Google で確認されていません」と出た場合は「詳細」→「安全ではないページに移動」で進めて問題ありません（自分自身が作成したスクリプトのため安全です）。</p>
+        </li>
+        <li>表示された「ウェブアプリのURL」をコピーする</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>②接続を確認する</h2>
+      <p class="note">コピーした「ウェブアプリのURL」を貼り付けてください。</p>
+      <label class="field-label">ウェブアプリURL</label>
+      <input type="url" id="input-gas-url" placeholder="https://script.google.com/macros/s/xxxx/exec">
+      <button class="btn" onclick="testGasConnection()">接続テスト</button>
+      <p class="note" id="gas-connect-status"></p>
+    </div>
+    <button class="btn secondary" onclick="showScreen('screen-home')">戻る</button>
+  </div>
+
+  <!-- ============ 管理者：ファイル取込 ============ -->
+  <div class="screen" id="screen-admin-import">
+    <h1>🗂️ 管理者設定</h1>
+    <div class="step-indicator"><div class="done"></div><div class="done"></div><div></div><div></div></div>
+    <div class="card">
+      <h2>②在庫リストの取込</h2>
+      <p class="note">CSVまたはExcelファイルを選択してください。1行目が列見出しの想定です。</p>
+      <input type="file" id="input-file" accept=".csv,.xlsx,.xls">
+    </div>
+    <button class="btn secondary" onclick="showScreen('screen-admin-connect')">戻る</button>
+  </div>
+
+  <!-- ============ 管理者：列マッピング ============ -->
+  <div class="screen" id="screen-admin-mapping">
+    <h1>🗂️ 管理者設定</h1>
+    <div class="step-indicator"><div class="done"></div><div class="done"></div><div class="done"></div><div></div></div>
+    <div class="card">
+      <h2>③列の役割を指定</h2>
+      <p class="note">
+        各列が何を表すか選んでください。<b>識別キー</b>は同一物と判定する項目（複数列選択可、例：品番＋枝番）。
+        <b>軸</b>はカウント担当を分けるための項目（ロケーション・組織等、複数列選択可・任意）。<b>帳簿数量</b>は必須です。
+      </p>
+      <div style="overflow-x:auto;">
+        <table class="map-table" id="mapping-table"></table>
+      </div>
+    </div>
+    <button class="btn" onclick="confirmMapping()">次へ（プレビュー）</button>
+    <button class="btn secondary" onclick="showScreen('screen-admin-import')">戻る</button>
+  </div>
+
+  <!-- ============ 管理者：プレビュー・送信 ============ -->
+  <div class="screen" id="screen-admin-preview">
+    <h1>🗂️ 管理者設定</h1>
+    <div class="step-indicator"><div class="done"></div><div class="done"></div><div class="done"></div><div class="done"></div></div>
+    <div class="card">
+      <h2>④内容の確認・送信</h2>
+      <div id="preview-summary"></div>
+      <div style="overflow-x:auto;max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+        <table class="map-table" id="preview-table"></table>
+      </div>
+    </div>
+    <button class="btn" onclick="sendSetup()">この内容で集計先に送信する</button>
+    <button class="btn secondary" onclick="showScreen('screen-admin-mapping')">戻る</button>
+  </div>
+
+  <!-- ============ 管理者：QR発行 ============ -->
+  <div class="screen" id="screen-admin-qr">
+    <h1>🗂️ 管理者設定</h1>
+    <div class="card">
+      <h2>✅ 送信完了：棚卸リストへのQRコード・リンクを発行しました</h2>
+      <p style="font-weight:700;">下のQRコード、またはリンクをカウント担当者に共有してください。</p>
+      <p class="note">※ このURLは後から取得し直すのがやや手間です。この画面を印刷するか、PDFとして保存しておくことをお勧めします（ブラウザの印刷機能をご利用ください）。</p>
+      <div id="qr-canvas" style="display:flex;justify-content:center;margin:16px auto;"></div>
+      <div class="link-box" id="share-link-box"></div>
+      <button class="btn secondary small" onclick="copyShareLink()">リンクをコピー</button>
+      <p class="note" style="margin-top:12px;">⚠️ 取り扱い注意：このURLは棚卸に参加するカウント担当者以外に共有しないでください。URLを知っていれば、技術的な知識がある方はデータの閲覧・変更が可能です。</p>
+    </div>
+    <div class="card">
+      <p class="note">
+        差異の確認・是正、最終的な結果はGoogleスプレッドシート側（集計・最終リスト シート）で行います。
+        取込時点のデータは「元データ」シートに、元ファイルと同じ列構成で数量だけ最終値に置き換えたものは
+        「最終（元レイアウト）」シートに自動で反映されます（在庫管理システムへの取込用）。
+        管理者設定はこれで完了しました。
+      </p>
+    </div>
+    <button class="btn secondary" onclick="showScreen('screen-home')">ホームに戻る</button>
+  </div>
+
+  <!-- ============ カウント担当者：GAS URL手入力（QR無しの場合） ============ -->
+  <div class="screen" id="screen-counter-connect">
+    <h1>📱 カウント入力</h1>
+    <div class="card">
+      <p class="note">管理者から共有されたリンクを開くと、このステップは自動で省略されます。URLだけ渡された場合は、コピーした「ウェブアプリのURL」を貼り付けてください。</p>
+      <label class="field-label">ウェブアプリURL</label>
+      <input type="url" id="input-counter-gas-url" placeholder="https://script.google.com/macros/s/xxxx/exec">
+      <button class="btn" onclick="connectAsCounter()">次へ</button>
+    </div>
+    <button class="btn secondary" onclick="showScreen('screen-home')">戻る</button>
+  </div>
+
+  <!-- ============ カウント担当者：氏名 ============ -->
+  <div class="screen" id="screen-counter-name">
+    <h1>📱 カウント入力</h1>
+    <div class="card">
+      <h2>お名前を入力してください</h2>
+      <p class="note">重複や差異の確認のために使います。ニックネームでも構いません。</p>
+      <input type="text" id="input-counter-name" placeholder="例：やまだ">
+      <button class="btn" onclick="confirmCounterName()">次へ</button>
+    </div>
+  </div>
+
+  <!-- ============ カウント担当者：軸選択 ============ -->
+  <div class="screen" id="screen-counter-axis">
+    <h1>📱 カウント入力</h1>
+    <div class="counter-name-bar">👤 <span class="name counter-name-text"></span><button type="button" onclick="changeCounterName()">別の名前で入力する</button></div>
+    <div class="card">
+      <h2>あなたの担当を選んでください</h2>
+      <div id="axis-select-area"></div>
+      <button class="btn" onclick="confirmAxisSelection()">この担当でカウントを始める</button>
+    </div>
+  </div>
+
+  <!-- ============ カウント担当者：一覧・入力 ============ -->
+  <div class="screen" id="screen-counter-list">
+    <h1>📱 カウント入力</h1>
+    <div class="counter-name-bar">👤 <span class="name counter-name-text"></span><button type="button" onclick="changeCounterName()">別の名前で入力する</button></div>
+    <div class="card" style="margin-bottom:8px;">
+      <div class="progress-line"><span id="counter-axis-label"></span><span id="counter-progress"></span></div>
+      <input type="text" class="search-box" id="counter-search" placeholder="品番・品名で検索" oninput="renderItemList()">
+      <button class="btn secondary small" onclick="showScreen('screen-counter-searchall')">🔍 この一覧にない品番を追加する</button>
+      <p class="note" style="margin-top:6px;margin-bottom:0;">※ 担当エリアで見つけたのに一覧に出てこない品番がある場合は、こちらから検索して追加してください。</p>
+    </div>
+    <h2>品目をタップして数量を入力してください</h2>
+    <div id="item-list"></div>
+    <div class="fab-bottom">
+      <div class="wrap-inner" style="flex-direction:column;align-items:stretch;">
+        <div class="warn-banner" id="unsent-banner" style="display:none;margin-bottom:8px;">⚠️ 未送信のデータがあります。忘れずに送信してください。</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn secondary" onclick="showScreen('screen-counter-axis')">担当を変更してカウントを続ける</button>
+          <button class="btn" id="btn-submit-counts" onclick="submitAllCounts()">カウント結果を送信する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ カウント担当者：全体検索（この一覧にない品番） ============ -->
+  <div class="screen" id="screen-counter-searchall">
+    <h1>📱 カウント入力</h1>
+    <div class="counter-name-bar">👤 <span class="name counter-name-text"></span><button type="button" onclick="changeCounterName()">別の名前で入力する</button></div>
+    <div class="card">
+      <h2>🔍 マスタ全体から探す</h2>
+      <p class="note">今の担当エリアの一覧に出てこない品番を見つけた場合はここで検索し、追加してください。追加すると、あなたの現在の担当（<span id="searchall-axis-label"></span>）としてカウントされます。</p>
+      <input type="text" id="counter-search-all" placeholder="品番・品名で検索" oninput="renderSearchAllResults()">
+      <div id="searchall-results"></div>
+    </div>
+    <button class="btn secondary" onclick="showScreen('screen-counter-list')">一覧に戻る</button>
+  </div>
+
+  <!-- ============ カウント担当者：送信完了 ============ -->
+  <div class="screen" id="screen-counter-sent">
+    <h1>📱 カウント入力</h1>
+    <div class="counter-name-bar">👤 <span class="name counter-name-text"></span><button type="button" onclick="changeCounterName()">別の名前で入力する</button></div>
+    <div class="card">
+      <h2>✅ 送信しました</h2>
+      <p class="note" id="sent-summary"></p>
+    </div>
+    <button class="btn" onclick="continueOtherAxis()">続けて別の担当エリアを数える</button>
+    <button class="btn secondary" onclick="finishCounter()">この端末での作業を終了する</button>
+  </div>
+
+  <p class="note" style="margin-top:24px;">本ツールは自由にご利用いただけます。利用により生じたいかなる損害についても、作成者は一切の責任を負いません。自己責任でご利用ください。</p>
+  <p class="note">本ツールは「VS Code × Claude Code」との対話を通じて作成しています。</p>
+
+</div>
+
+<script>
+// ================== 共通ユーティリティ ==================
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+async function gasGet(gasUrl, params){
+  const usp = new URLSearchParams(params);
+  const res = await fetch(gasUrl + '?' + usp.toString());
+  return res.json();
+}
+async function gasPost(gasUrl, body){
+  const res = await fetch(gasUrl, {
+    method:'POST',
+    headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+// ================== 状態 ==================
+let admin = {
+  gasUrl:'',
+  headers:[],
+  rows:[],
+  colRoles:[], // 各列 index -> '' | 'key' | 'display' | 'axis' | 'bookQty'
+  items:[], // マッピング後 {key, display, axes:[], bookQty, originalRow}
+  axisColIndices:[],
+  bookQtyColIndex:-1
+};
+let counter = {
+  gasUrl:'',
+  name:'',
+  config:{ keyLabel:'識別キー', displayLabel:'表示名', axisLabels:[] },
+  masterItems:[],
+  axisValues:[],
+  filteredItems:[],
+  expandedKey:null,
+  draft:{} // key -> {qty, memo, touched}
+};
+
+// ================== ホーム ==================
+function goAdminStart(){ showScreen('screen-admin-connect'); }
+
+function goCounterStart(){
+  const savedName = localStorage.getItem('tanaoroshi_name');
+  if(savedName) counter.name = savedName;
+  showScreen('screen-counter-connect');
+}
+
+// URLパラメータで直接カウントモードに入る
+(function initFromUrl(){
+  const params = new URLSearchParams(location.search);
+  const gas = params.get('gas');
+  if(gas){
+    counter.gasUrl = gas;
+    const savedName = localStorage.getItem('tanaoroshi_name');
+    window.addEventListener('DOMContentLoaded', function(){
+      if(savedName){
+        counter.name = savedName;
+        loadCounterMaster();
+      } else {
+        showScreen('screen-counter-name');
+      }
+    });
+  }
+})();
+
+// ================== 管理者：接続 ==================
+async function testGasConnection(){
+  const url = document.getElementById('input-gas-url').value.trim();
+  const statusEl = document.getElementById('gas-connect-status');
+  if(!url){ statusEl.textContent = 'URLを入力してください。'; return; }
+  statusEl.textContent = '接続確認中...';
+  try{
+    const res = await gasGet(url, { action:'ping' });
+    if(res.ok){
+      admin.gasUrl = url;
+      statusEl.textContent = '✅ 接続できました。';
+      setTimeout(function(){ showScreen('screen-admin-import'); }, 500);
+    } else {
+      statusEl.textContent = '接続できませんでした：' + (res.error||'');
+    }
+  }catch(err){
+    statusEl.textContent = '接続エラー：URL・公開設定（アクセスできるユーザー：全員）をご確認ください。';
+  }
+}
+
+// ================== 管理者：ファイル取込 ==================
+document.getElementById('input-file').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const isCsv = /\.csv$/i.test(file.name);
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const buf = ev.target.result;
+    let wb;
+    if(isCsv){
+      // CSVは文字コードが不定（UTF-8 / Shift-JIS等）なので、まずUTF-8として厳密デコードを試み、
+      // 失敗した場合はShift-JIS（日本の業務システムで多い）にフォールバックする。
+      const bytes = new Uint8Array(buf);
+      let text;
+      try{
+        text = new TextDecoder('utf-8', { fatal:true }).decode(bytes);
+      }catch(err){
+        text = new TextDecoder('shift-jis').decode(bytes);
+      }
+      wb = XLSX.read(text, { type:'string' });
+    } else {
+      wb = XLSX.read(new Uint8Array(buf), { type:'array' });
+    }
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'' });
+    admin.headers = json[0].map(String);
+    admin.rows = json.slice(1).filter(function(r){ return r.some(function(c){ return c !== ''; }); });
+    buildMappingTable();
+    showScreen('screen-admin-mapping');
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function buildMappingTable(){
+  admin.colRoles = admin.headers.map(function(){ return ''; });
+  const table = document.getElementById('mapping-table');
+  let html = '<tr><th>元の列名</th><th>役割</th></tr>';
+  admin.headers.forEach(function(h, i){
+    html += '<tr><td>'+escapeHtml(h)+'</td><td>'+
+      '<select onchange="setColRole('+i+', this.value)">'+
+      '<option value="">使わない</option>'+
+      '<option value="key">識別キー</option>'+
+      '<option value="display">表示名</option>'+
+      '<option value="axis">軸（分割用）</option>'+
+      '<option value="bookQty">帳簿数量</option>'+
+      '</select></td></tr>';
+  });
+  table.innerHTML = html;
+}
+function setColRole(i, role){
+  // 先に配列を更新してから、他の列との重複解除・再描画を行う
+  // （順序を逆にすると、今まさに選んだ列自身の値が再描画で元に戻ってしまうバグになる）
+  admin.colRoles[i] = role;
+  // 識別キー・軸は複数列可、表示名・帳簿数量は単一列のみ許可（同じ役割の他の列の指定を解除）
+  if(role !== '' && role !== 'key' && role !== 'axis'){
+    admin.colRoles.forEach(function(r, idx){
+      if(idx !== i && r === role) admin.colRoles[idx] = '';
+    });
+  }
+  rebuildMappingSelectValues();
+}
+function rebuildMappingSelectValues(){
+  const selects = document.querySelectorAll('#mapping-table select');
+  selects.forEach(function(sel, i){ sel.value = admin.colRoles[i]; });
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+  });
+}
+
+function confirmMapping(){
+  const keyIdx = [];
+  const axisIdx = [];
+  let displayIdx=-1, bookQtyIdx=-1;
+  admin.colRoles.forEach(function(r, i){
+    if(r==='key') keyIdx.push(i);
+    if(r==='display') displayIdx=i;
+    if(r==='axis') axisIdx.push(i);
+    if(r==='bookQty') bookQtyIdx=i;
+  });
+  if(keyIdx.length===0){ alert('識別キーを最低1列は指定してください。'); return; }
+  if(bookQtyIdx===-1){ alert('帳簿数量の列を指定してください。'); return; }
+
+  admin.items = admin.rows.map(function(r){
+    const key = keyIdx.map(function(ki){ return String(r[ki]).trim(); }).join('|');
+    return {
+      key: key,
+      display: displayIdx>-1 ? String(r[displayIdx]) : '',
+      axes: axisIdx.map(function(ai){ return String(r[ai]); }),
+      bookQty: Number(r[bookQtyIdx])||0,
+      originalRow: r
+    };
+  }).filter(function(it){ return it.key !== ''; });
+
+  admin.config = {
+    keyLabel: keyIdx.map(function(ki){ return admin.headers[ki]; }).join('+'),
+    displayLabel: displayIdx>-1 ? admin.headers[displayIdx] : '',
+    axisLabels: axisIdx.map(function(ai){ return admin.headers[ai]; })
+  };
+  admin.axisColIndices = axisIdx;
+  admin.bookQtyColIndex = bookQtyIdx;
+
+  renderPreview();
+  showScreen('screen-admin-preview');
+}
+
+function renderPreview(){
+  const axisLabels = admin.config.axisLabels;
+  const totalBookQty = admin.items.reduce(function(sum, it){ return sum + (Number(it.bookQty)||0); }, 0);
+  const excludedCount = admin.rows.length - admin.items.length;
+  let summaryHtml =
+    '<div class="warn-banner" style="text-align:left;">'+
+      '元ファイルの行数：<b>'+admin.rows.length+'行</b>　→　取込対象：<b>'+admin.items.length+'件</b><br>'+
+      (excludedCount>0 ? '⚠️ '+excludedCount+'行は識別キーが空欄のため除外されました。<br>' : '')+
+      '帳簿数量の合計：<b>'+totalBookQty.toLocaleString()+'</b><br>'+
+      '⚠️ 送信前に、元の在庫管理システム側の件数・数量合計と必ず一致確認してください。'+
+    '</div>'+
+    '<p>識別キー：'+escapeHtml(admin.config.keyLabel)+' ／ 表示名：'+escapeHtml(admin.config.displayLabel||'（未設定）')+
+    ' ／ 軸：'+(axisLabels.length ? escapeHtml(axisLabels.join('、')) : '（未使用）')+'</p>';
+  document.getElementById('preview-summary').innerHTML = summaryHtml;
+  const axisHeaderHtml = axisLabels.map(function(l){ return '<th>'+escapeHtml(l)+'</th>'; }).join('');
+  let html = '<tr><th>識別キー</th><th>表示名</th>'+axisHeaderHtml+'<th>帳簿数量</th></tr>';
+  admin.items.slice(0,50).forEach(function(it){
+    const axisCellsHtml = it.axes.map(function(v){ return '<td>'+escapeHtml(v)+'</td>'; }).join('');
+    html += '<tr><td>'+escapeHtml(it.key)+'</td><td>'+escapeHtml(it.display)+'</td>'+axisCellsHtml+'<td>'+it.bookQty+'</td></tr>';
+  });
+  document.getElementById('preview-table').innerHTML = html;
+}
+
+async function sendSetup(){
+  try{
+    toast('送信中...');
+    const res = await gasPost(admin.gasUrl, {
+      action:'setup',
+      config: admin.config,
+      items: admin.items.map(function(it){
+        return { key:it.key, display:it.display, axes:it.axes, bookQty:it.bookQty, originalRow:it.originalRow };
+      }),
+      originalHeaders: admin.headers,
+      originalRows: admin.rows,
+      axisColIndices: admin.axisColIndices,
+      bookQtyColIndex: admin.bookQtyColIndex
+    });
+    if(res.ok){
+      renderShareLink();
+      showScreen('screen-admin-qr');
+    } else {
+      alert('送信に失敗しました：' + (res.error||''));
+    }
+  }catch(err){
+    alert('送信エラー：' + err);
+  }
+}
+
+function renderShareLink(){
+  const base = location.origin + location.pathname;
+  const link = base + '?gas=' + encodeURIComponent(admin.gasUrl) + '&mode=count';
+  document.getElementById('share-link-box').textContent = link;
+  const qrEl = document.getElementById('qr-canvas');
+  qrEl.innerHTML = '';
+  new QRCode(qrEl, { text: link, width:220, height:220 });
+  window._shareLink = link;
+}
+function copyShareLink(){
+  navigator.clipboard.writeText(window._shareLink||'').then(function(){ toast('コピーしました'); });
+}
+function copyGasCode(){
+  const box = document.getElementById('gas-code-box');
+  navigator.clipboard.writeText(box.value||'').then(function(){ toast('コピーしました'); });
+}
+
+// ================== カウント担当者：接続 ==================
+function connectAsCounter(){
+  const url = document.getElementById('input-counter-gas-url').value.trim();
+  if(!url){ alert('URLを入力してください'); return; }
+  counter.gasUrl = url;
+  const savedName = localStorage.getItem('tanaoroshi_name');
+  if(savedName){ counter.name = savedName; loadCounterMaster(); }
+  else showScreen('screen-counter-name');
+}
+function confirmCounterName(){
+  const name = document.getElementById('input-counter-name').value.trim();
+  if(!name){ alert('お名前を入力してください'); return; }
+  counter.name = name;
+  localStorage.setItem('tanaoroshi_name', name);
+  loadCounterMaster();
+}
+
+function renderCounterNameBar(){
+  document.querySelectorAll('.counter-name-text').forEach(function(el){ el.textContent = counter.name; });
+}
+function changeCounterName(){
+  localStorage.removeItem('tanaoroshi_name');
+  counter.name = '';
+  document.getElementById('input-counter-name').value = '';
+  showScreen('screen-counter-name');
+}
+
+async function loadCounterMaster(){
+  try{
+    renderCounterNameBar();
+    toast('読み込み中...');
+    const res = await gasGet(counter.gasUrl, { action:'getMaster' });
+    if(!res.ok){ alert('読み込みに失敗しました：' + (res.error||'')); return; }
+    counter.masterItems = res.items;
+    counter.config = res.config;
+    renderAxisSelect();
+    showScreen('screen-counter-axis');
+  }catch(err){
+    alert('読み込みエラー：' + err);
+  }
+}
+
+// ================== カウント担当者：軸選択 ==================
+function renderAxisSelect(){
+  const area = document.getElementById('axis-select-area');
+  const labels = counter.config.axisLabels || [];
+  if(labels.length === 0){
+    area.innerHTML = '<p class="note">この棚卸ではエリア分割が設定されていません。全品目の一覧が表示されます。</p>';
+    counter.axisValues = [];
+    return;
+  }
+  area.innerHTML = labels.map(function(label, i){
+    return '<label class="field-label">'+escapeHtml(label)+'</label>'+
+      '<select id="sel-axis-'+i+'"><option value="">選択してください</option></select>';
+  }).join('');
+
+  function populateAxisOptions(i){
+    const sel = document.getElementById('sel-axis-'+i);
+    const prevSelections = [];
+    for(let j=0;j<i;j++){
+      const s = document.getElementById('sel-axis-'+j);
+      prevSelections.push(s ? s.value : '');
+    }
+    const candidates = counter.masterItems.filter(function(it){
+      for(let j=0;j<i;j++){
+        if(it.axes[j] !== prevSelections[j]) return false;
+      }
+      return true;
+    });
+    const values = uniqueVals(candidates.map(function(it){ return it.axes[i]; }));
+    sel.innerHTML = '<option value="">選択してください</option>'+
+      values.map(function(v){ return '<option value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</option>'; }).join('');
+  }
+  populateAxisOptions(0);
+  labels.forEach(function(_, i){
+    document.getElementById('sel-axis-'+i).addEventListener('change', function(){
+      for(let k=i+1;k<labels.length;k++){ populateAxisOptions(k); }
+    });
+  });
+}
+function uniqueVals(arr){
+  const set = {};
+  arr.forEach(function(v){ if(v!=='' && v!=null) set[v]=true; });
+  return Object.keys(set).sort();
+}
+
+function confirmAxisSelection(){
+  const labels = counter.config.axisLabels || [];
+  const values = [];
+  for(let i=0;i<labels.length;i++){
+    const sel = document.getElementById('sel-axis-'+i);
+    const v = sel ? sel.value : '';
+    if(!v){ alert('担当を選択してください'); return; }
+    values.push(v);
+  }
+  counter.axisValues = values;
+  loadDraftFromStorage();
+  filterItemsForAxis();
+  showScreen('screen-counter-list');
+}
+
+function draftStorageKey(){
+  return 'tanaoroshi_draft_' + counter.axisValues.join('_');
+}
+function loadDraftFromStorage(){
+  const raw = localStorage.getItem(draftStorageKey());
+  counter.draft = raw ? JSON.parse(raw) : {};
+}
+function saveDraftToStorage(){
+  localStorage.setItem(draftStorageKey(), JSON.stringify(counter.draft));
+}
+
+function filterItemsForAxis(){
+  const labels = counter.config.axisLabels || [];
+  if(labels.length === 0){
+    counter.filteredItems = counter.masterItems.slice();
+  } else {
+    counter.filteredItems = counter.masterItems.filter(function(it){
+      for(let j=0;j<labels.length;j++){
+        if(it.axes[j] !== counter.axisValues[j]) return false;
+      }
+      return true;
+    });
+  }
+  // 追加済み(全体検索から追加した)項目もマージ
+  Object.keys(counter.draft).forEach(function(k){
+    if(counter.draft[k].added && !counter.filteredItems.some(function(i){return i.key===k;})){
+      counter.filteredItems.push(counter.draft[k].itemRef);
+    }
+  });
+  renderCounterAxisLabel();
+  renderItemList();
+}
+function renderCounterAxisLabel(){
+  const labels = counter.config.axisLabels || [];
+  let label = '担当：全件';
+  if(labels.length){
+    label = labels.map(function(l,i){ return l+'='+counter.axisValues[i]; }).join(' / ');
+  }
+  document.getElementById('counter-axis-label').textContent = label;
+  document.getElementById('searchall-axis-label').textContent = label;
+}
+
+// ================== カウント担当者：一覧表示 ==================
+function updateUnsentBanner(){
+  const banner = document.getElementById('unsent-banner');
+  if(!banner) return;
+  const hasUnsent = Object.keys(counter.draft).some(function(k){ return counter.draft[k].touched; });
+  banner.style.display = hasUnsent ? 'block' : 'none';
+}
+
+function renderItemList(){
+  updateUnsentBanner();
+  const q = (document.getElementById('counter-search').value||'').trim().toLowerCase();
+  const list = counter.filteredItems.filter(function(it){
+    if(!q) return true;
+    return (it.key||'').toLowerCase().indexOf(q)>=0 || (it.display||'').toLowerCase().indexOf(q)>=0;
+  });
+  const touchedCount = counter.filteredItems.filter(function(it){ return counter.draft[it.key] && counter.draft[it.key].touched; }).length;
+  document.getElementById('counter-progress').textContent = touchedCount + ' / ' + counter.filteredItems.length + ' 件入力済み';
+
+  const container = document.getElementById('item-list');
+  container.innerHTML = list.map(function(it){
+    const d = counter.draft[it.key] || {};
+    const touched = d.touched;
+    const expanded = counter.expandedKey === it.key;
+    return '<div class="item-row '+(touched?'touched ':'')+(expanded?'expanded':'')+'" data-key="'+escapeHtml(it.key)+'">'+
+      '<div class="row-head" data-action="toggle">'+
+        '<div><div class="name">'+escapeHtml(it.display||'(表示名なし)')+'</div><div class="key">'+escapeHtml(it.key)+'</div></div>'+
+        '<div class="check">'+(touched?'✓':'')+'</div>'+
+      '</div>'+
+      '<div class="expand">'+
+        '<div class="big-name">'+escapeHtml(it.display||'(表示名なし)')+'</div>'+
+        '<div class="big-key">'+escapeHtml(it.key)+'</div>'+
+        '<label class="field-label">実地でカウントした数量</label>'+
+        '<div class="qty-control">'+
+          '<button type="button" data-action="dec">－</button>'+
+          '<input type="number" inputmode="numeric" value="'+(d.qty!=null?d.qty:'')+'" placeholder="0" data-action="qty-input">'+
+          '<button type="button" data-action="inc">＋</button>'+
+        '</div>'+
+        '<p class="note" style="margin-top:-6px;">※ 見つからない場合も「0」を入力してください。未入力のままだと「まだ数えていない」扱いになります。</p>'+
+        '<label class="field-label">メモ（任意・差異調査時のみ参照）</label>'+
+        '<input type="text" value="'+escapeHtml(d.memo||'')+'" data-action="memo-input" placeholder="例：棚3の奥にありました">'+
+        (touched ? '<button type="button" class="btn secondary small" data-action="reset">↺ この項目の入力を取り消す（未入力に戻す）</button>' : '')+
+      '</div>'+
+    '</div>';
+  }).join('') || '<p class="note">該当する品目がありません。</p>';
+}
+
+// イベント委譲：品目一覧（onclick文字列埋め込みだと品番・品名に含まれる引用符でHTMLが壊れるため）
+document.getElementById('item-list').addEventListener('click', function(e){
+  const actionEl = e.target.closest('[data-action]');
+  if(!actionEl) return;
+  const row = e.target.closest('.item-row');
+  if(!row) return;
+  const key = row.getAttribute('data-key');
+  const action = actionEl.getAttribute('data-action');
+  if(action==='toggle') toggleExpand(key);
+  else if(action==='dec') stepQty(key, -1);
+  else if(action==='inc') stepQty(key, 1);
+  else if(action==='reset') resetItem(key);
+});
+document.getElementById('item-list').addEventListener('change', function(e){
+  const row = e.target.closest('.item-row');
+  if(!row) return;
+  const key = row.getAttribute('data-key');
+  const action = e.target.getAttribute('data-action');
+  if(action==='qty-input') setQty(key, e.target.value);
+  else if(action==='memo-input') setMemo(key, e.target.value);
+});
+
+function toggleExpand(key){
+  counter.expandedKey = (counter.expandedKey === key) ? null : key;
+  renderItemList();
+}
+function ensureDraft(key){
+  if(!counter.draft[key]) counter.draft[key] = { qty:0, memo:'', touched:false };
+  return counter.draft[key];
+}
+function stepQty(key, delta){
+  const d = ensureDraft(key);
+  d.qty = Math.max(0, (Number(d.qty)||0) + delta);
+  d.touched = true;
+  counter.expandedKey = key;
+  saveDraftToStorage();
+  renderItemList();
+}
+function setQty(key, val){
+  const d = ensureDraft(key);
+  d.qty = Math.max(0, Number(val)||0);
+  d.touched = true;
+  saveDraftToStorage();
+  renderItemList();
+}
+function setMemo(key, val){
+  const d = ensureDraft(key);
+  d.memo = val;
+  saveDraftToStorage();
+}
+function resetItem(key){
+  delete counter.draft[key];
+  counter.expandedKey = null;
+  saveDraftToStorage();
+  renderItemList();
+}
+
+// ================== カウント担当者：全体検索して追加 ==================
+function renderSearchAllResults(){
+  const q = (document.getElementById('counter-search-all').value||'').trim().toLowerCase();
+  if(!q){ document.getElementById('searchall-results').innerHTML=''; return; }
+  const results = counter.masterItems.filter(function(it){
+    return (it.key||'').toLowerCase().indexOf(q)>=0 || (it.display||'').toLowerCase().indexOf(q)>=0;
+  }).slice(0,30);
+  document.getElementById('searchall-results').innerHTML = results.map(function(it){
+    return '<div class="item-row"><div class="row-head"><div><div class="name">'+escapeHtml(it.display||'(表示名なし)')+'</div><div class="key">'+escapeHtml(it.key)+'</div></div>'+
+      '<button class="btn small" data-action="add-found" data-key="'+escapeHtml(it.key)+'">追加</button></div></div>';
+  }).join('') || '<p class="note">見つかりませんでした。</p>';
+}
+document.getElementById('searchall-results').addEventListener('click', function(e){
+  const btn = e.target.closest('[data-action="add-found"]');
+  if(!btn) return;
+  addFoundItem(btn.getAttribute('data-key'));
+});
+function addFoundItem(key){
+  const it = counter.masterItems.find(function(i){ return i.key===key; });
+  if(!it) return;
+  const d = ensureDraft(key);
+  d.added = true;
+  d.itemRef = { key: it.key, display: it.display, axes: counter.axisValues.slice(), bookQty: it.bookQty };
+  saveDraftToStorage();
+  filterItemsForAxis();
+  toast('一覧に追加しました');
+  showScreen('screen-counter-list');
+  counter.expandedKey = key;
+  renderItemList();
+}
+
+// ================== カウント担当者：送信 ==================
+async function submitAllCounts(){
+  const btn = document.getElementById('btn-submit-counts');
+  if(btn.disabled) return; // 連打防止
+  const items = Object.keys(counter.draft)
+    .filter(function(k){ return counter.draft[k].touched; })
+    .map(function(k){
+      const d = counter.draft[k];
+      return { key:k, axes: counter.axisValues.slice(), qty: d.qty, memo: d.memo||'' };
+    });
+  if(items.length===0){ alert('入力済みの品目がありません。'); return; }
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '送信中...';
+  try{
+    toast('送信中...');
+    const res = await gasPost(counter.gasUrl, { action:'submitCounts', name: counter.name, items: items });
+    if(res.ok){
+      localStorage.removeItem(draftStorageKey());
+      counter.draft = {}; // 送信済みにしたので、離脱時の未送信チェックにも反映させる
+      btn.disabled = false;
+      btn.textContent = originalText;
+      document.getElementById('sent-summary').textContent = items.length + '件のカウント結果を送信しました。';
+      showScreen('screen-counter-sent');
+    } else {
+      alert('送信に失敗しました：' + (res.error||''));
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }catch(err){
+    alert('送信エラー：' + err);
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+// 入力済み（未送信）のデータがある状態でページを離れようとした場合、確認ダイアログを出す
+window.addEventListener('beforeunload', function(e){
+  const hasUnsent = Object.keys(counter.draft).some(function(k){ return counter.draft[k].touched; });
+  if(hasUnsent){
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+function continueOtherAxis(){
+  renderAxisSelect();
+  showScreen('screen-counter-axis');
+}
+function finishCounter(){
+  showScreen('screen-home');
+}
+</script>
+</body>
+</html>
