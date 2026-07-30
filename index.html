@@ -1316,15 +1316,49 @@ function confirmAxisSelection(){
   showScreen('screen-counter-list');
 }
 
+const DRAFT_PREFIX = 'tanaoroshi_draft_';
 function draftStorageKey(){
-  return 'tanaoroshi_draft_' + counter.axisValues.join('_');
+  return DRAFT_PREFIX + counter.axisValues.join('_');
 }
 function loadDraftFromStorage(){
   const raw = localStorage.getItem(draftStorageKey());
-  counter.draft = raw ? JSON.parse(raw) : {};
+  const parsed = raw ? JSON.parse(raw) : null;
+  counter.draft = (parsed && parsed.items) ? parsed.items : {}; // 旧形式（items無し）が残っていても壊れないようにする
 }
 function saveDraftToStorage(){
-  localStorage.setItem(draftStorageKey(), JSON.stringify(counter.draft));
+  localStorage.setItem(draftStorageKey(), JSON.stringify({ axisValues: counter.axisValues, items: counter.draft }));
+}
+
+// 現在の担当エリアだけでなく、ブラウザに残っている「他の担当エリアの未送信下書き」も
+// まとめて集める（担当を変更して送信しても取りこぼさないようにするため）
+function collectAllPendingDrafts(){
+  const result = [];
+  const seenKeys = {};
+
+  Object.keys(counter.draft).forEach(function(k){
+    const d = counter.draft[k];
+    if(d.touched){
+      result.push({ storageKey: draftStorageKey(), axisValues: counter.axisValues.slice(), key:k, qty:d.qty, memo:d.memo||'' });
+    }
+  });
+  seenKeys[draftStorageKey()] = true;
+
+  for(let i=0;i<localStorage.length;i++){
+    const sk = localStorage.key(i);
+    if(!sk || sk.indexOf(DRAFT_PREFIX)!==0 || seenKeys[sk]) continue;
+    try{
+      const parsed = JSON.parse(localStorage.getItem(sk));
+      const axisValues = parsed.axisValues || [];
+      const items = parsed.items || {};
+      Object.keys(items).forEach(function(k){
+        const d = items[k];
+        if(d.touched){
+          result.push({ storageKey: sk, axisValues: axisValues.slice(), key:k, qty:d.qty, memo:d.memo||'' });
+        }
+      });
+    }catch(e){ /* 壊れた保存データは無視 */ }
+  }
+  return result;
 }
 
 function filterItemsForAxis(){
@@ -1362,7 +1396,7 @@ function renderCounterAxisLabel(){
 function updateUnsentBanner(){
   const banner = document.getElementById('unsent-banner');
   if(!banner) return;
-  const hasUnsent = Object.keys(counter.draft).some(function(k){ return counter.draft[k].touched; });
+  const hasUnsent = collectAllPendingDrafts().length > 0;
   banner.style.display = hasUnsent ? 'block' : 'none';
 }
 
@@ -1496,13 +1530,13 @@ function addFoundItem(key){
 async function submitAllCounts(){
   const btn = document.getElementById('btn-submit-counts');
   if(btn.disabled) return; // 連打防止
-  const items = Object.keys(counter.draft)
-    .filter(function(k){ return counter.draft[k].touched; })
-    .map(function(k){
-      const d = counter.draft[k];
-      return { key:k, axes: counter.axisValues.slice(), qty: d.qty, memo: d.memo||'' };
-    });
-  if(items.length===0){ alert('入力済みの品目がありません。'); return; }
+  const pending = collectAllPendingDrafts(); // 現在の担当エリア＋他の担当エリアの未送信分もまとめて集める
+  if(pending.length===0){ alert('入力済みの品目がありません。'); return; }
+  const items = pending.map(function(p){
+    return { key:p.key, axes:p.axisValues, qty:p.qty, memo:p.memo };
+  });
+  const storageKeysToClear = [];
+  pending.forEach(function(p){ if(storageKeysToClear.indexOf(p.storageKey)===-1) storageKeysToClear.push(p.storageKey); });
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '送信中...';
@@ -1510,7 +1544,7 @@ async function submitAllCounts(){
     toast('送信中...');
     const res = await gasPost(counter.gasUrl, { action:'submitCounts', name: counter.name, items: items });
     if(res.ok){
-      localStorage.removeItem(draftStorageKey());
+      storageKeysToClear.forEach(function(sk){ localStorage.removeItem(sk); });
       counter.draft = {}; // 送信済みにしたので、離脱時の未送信チェックにも反映させる
       btn.disabled = false;
       btn.textContent = originalText;
@@ -1530,7 +1564,7 @@ async function submitAllCounts(){
 
 // 入力済み（未送信）のデータがある状態でページを離れようとした場合、確認ダイアログを出す
 window.addEventListener('beforeunload', function(e){
-  const hasUnsent = Object.keys(counter.draft).some(function(k){ return counter.draft[k].touched; });
+  const hasUnsent = collectAllPendingDrafts().length > 0;
   if(hasUnsent){
     e.preventDefault();
     e.returnValue = '';
