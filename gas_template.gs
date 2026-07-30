@@ -185,7 +185,10 @@ function ensureSheet_(ss, name, header) {
 
 // 見出し+データで使っている行・列数を超える分を削除し、見た目を整える
 function trimSheet_(sh, usedRows, usedCols) {
-  if (sh.getMaxRows() > usedRows) sh.deleteRows(usedRows + 1, sh.getMaxRows() - usedRows);
+  // 見出し行を固定しているため、固定行の下に最低1行は残す必要がある
+  // （データ0件の場合にusedRows=1のまま削除すると「固定行以外を全部削除」となりエラーになる）
+  const targetRows = Math.max(usedRows, 2);
+  if (sh.getMaxRows() > targetRows) sh.deleteRows(targetRows + 1, sh.getMaxRows() - targetRows);
   if (sh.getMaxColumns() > usedCols) sh.deleteColumns(usedCols + 1, sh.getMaxColumns() - usedCols);
 }
 
