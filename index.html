@@ -28,7 +28,7 @@
   h2{font-size:1.1rem;margin:0 0 12px;}
   p.note{color:var(--text);font-size:0.85rem;line-height:1.6;}
   .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:14px 18px;font-size:1rem;font-weight:600;cursor:pointer;width:100%;min-height:48px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:14px 18px;font-size:1rem;font-weight:600;cursor:pointer;width:100%;min-height:48px;text-decoration:none;}
   .btn:active{background:var(--accent-dark);}
   .btn.secondary{background:transparent;color:var(--accent);border:1.5px solid var(--accent);}
   .btn.small{width:auto;padding:8px 14px;font-size:0.85rem;min-height:38px;}
@@ -82,6 +82,8 @@
   .qty-control{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
   .qty-control button{width:52px;height:52px;font-size:1.6rem;border-radius:12px;border:none;background:var(--accent);color:#fff;flex-shrink:0;}
   .qty-control input{text-align:center;font-size:1.4rem;font-weight:700;margin-bottom:0;padding:12px 4px;}
+  .qty-control .qty-unit{font-size:0.95rem;color:var(--muted);font-weight:600;flex-shrink:0;}
+  .book-qty-note{margin:-4px 0 10px;}
   .fab-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:8px;z-index:50;}
   .fab-bottom .wrap-inner{max-width:640px;margin:0 auto;width:100%;display:flex;gap:8px;}
 
@@ -209,27 +211,27 @@
 // （コードの保存だけでは、公開中のURLには反映されません）。
 // ============================================================
 
-const SHEET_GUIDE = '使い方';
-const SHEET_MASTER = 'マスタ';
-const SHEET_ANSWERS = '回答';
-const SHEET_SUMMARY = '集計';
-const SHEET_FINAL = '最終リスト';
-const SHEET_ORIGINAL = '元データ';
-const SHEET_FINAL_ORIGINAL = '最終（元レイアウト）';
+const SHEET_GUIDE = &#x27;使い方&#x27;;
+const SHEET_MASTER = &#x27;マスタ&#x27;;
+const SHEET_ANSWERS = &#x27;回答&#x27;;
+const SHEET_SUMMARY = &#x27;集計&#x27;;
+const SHEET_FINAL = &#x27;最終リスト&#x27;;
+const SHEET_ORIGINAL = &#x27;元データ&#x27;;
+const SHEET_FINAL_ORIGINAL = &#x27;最終（元レイアウト）&#x27;;
 
 // ---------------- ヘッダー定義（軸の数に応じて可変） ----------------
 
 function masterHeader_(axisLabels) {
-  return ['識別キー', '表示名'].concat(axisLabels).concat(['帳簿数量', '元データ(JSON)']);
+  return [&#x27;識別キー&#x27;, &#x27;表示名&#x27;].concat(axisLabels).concat([&#x27;帳簿数量&#x27;, &#x27;単位&#x27;, &#x27;元データ(JSON)&#x27;]);
 }
 function answersHeader_(axisLabels) {
-  return ['タイムスタンプ', '担当者名', '識別キー'].concat(axisLabels).concat(['数量', '場所メモ']);
+  return [&#x27;タイムスタンプ&#x27;, &#x27;担当者名&#x27;, &#x27;識別キー&#x27;].concat(axisLabels).concat([&#x27;数量&#x27;, &#x27;場所メモ&#x27;]);
 }
 function summaryHeader_(axisLabels) {
-  return ['識別キー'].concat(axisLabels).concat(['表示名', '帳簿数量', '実地数（合算）', '入力件数', '表示用実地数', '差異', '内訳（担当者:数量(メモ)）', '管理者上書き', '上書き理由', '最終実地数']);
+  return [&#x27;識別キー&#x27;].concat(axisLabels).concat([&#x27;表示名&#x27;, &#x27;帳簿数量&#x27;, &#x27;単位&#x27;, &#x27;実地数（合算）&#x27;, &#x27;入力件数&#x27;, &#x27;表示用実地数&#x27;, &#x27;差異&#x27;, &#x27;内訳（担当者:数量(メモ)）&#x27;, &#x27;管理者上書き&#x27;, &#x27;上書き理由&#x27;, &#x27;最終実地数&#x27;]);
 }
 function finalHeader_(axisLabels) {
-  return ['識別キー', '表示名'].concat(axisLabels).concat(['最終数量']);
+  return [&#x27;識別キー&#x27;, &#x27;表示名&#x27;].concat(axisLabels).concat([&#x27;単位&#x27;, &#x27;最終数量&#x27;]);
 }
 
 // ---------------- エントリーポイント ----------------
@@ -237,16 +239,16 @@ function finalHeader_(axisLabels) {
 function doGet(e) {
   try {
     const action = e.parameter.action;
-    if (action === 'ping') {
+    if (action === &#x27;ping&#x27;) {
       return jsonOut({ ok: true });
     }
-    if (action === 'getMaster') {
+    if (action === &#x27;getMaster&#x27;) {
       return jsonOut({ ok: true, items: getMasterData(), config: getConfig() });
     }
-    if (action === 'getConfig') {
+    if (action === &#x27;getConfig&#x27;) {
       return jsonOut({ ok: true, config: getConfig() });
     }
-    return jsonOut({ ok: false, error: 'unknown action: ' + action });
+    return jsonOut({ ok: false, error: &#x27;unknown action: &#x27; + action });
   } catch (err) {
     return jsonOut({ ok: false, error: String(err) });
   }
@@ -256,13 +258,13 @@ function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
     const action = body.action;
-    if (action === 'setup') {
+    if (action === &#x27;setup&#x27;) {
       return jsonOut(setupMaster(body));
     }
-    if (action === 'submitCounts') {
+    if (action === &#x27;submitCounts&#x27;) {
       return jsonOut(submitCounts(body));
     }
-    return jsonOut({ ok: false, error: 'unknown action: ' + action });
+    return jsonOut({ ok: false, error: &#x27;unknown action: &#x27; + action });
   } catch (err) {
     return jsonOut({ ok: false, error: String(err) });
   }
@@ -296,53 +298,53 @@ function writeUsageGuideSheet_() {
     sh.setFrozenRows(1);
   }
 
-  const header = ['No.', '区分', '担当', '作業場所', '内容'];
+  const header = [&#x27;No.&#x27;, &#x27;区分&#x27;, &#x27;担当&#x27;, &#x27;作業場所&#x27;, &#x27;内容&#x27;];
   const COLS = header.length;
 
   // セクション見出し行は、作成者メッセージで謳っている「まるごとサポート」の
   // 5パート（棚卸リスト作成／配付／カウント／回収／カウント結果入力）との対応を示す。
   // カウント・回収・結果入力は、送信と同時に自動完了するため1セクションに統合している。
   const items = [
-    { section: '棚卸リスト作成' },
-    { row: ['1', '手動', '管理者', '実地棚卸支援ツール', '在庫リストを取込み、列（識別キー・表示名・軸・帳簿数量）を指定する。プレビュー画面で件数・帳簿数量の合計が元データと一致するか確認してから送信する'] },
-    { row: ['1-1', '自動', 'システム', 'マスタ／元データ', 'シートが作成され、取り込んだデータが保存される'] },
-    { row: ['1-2', '自動', 'システム', '集計／最終リスト／最終（元レイアウト）', 'シートが作成され、差異・最終結果が計算される'] },
-    { section: '棚卸リスト配付' },
-    { row: ['2', '手動', '管理者', '実地棚卸支援ツール', '発行されたQRコード・リンクをカウント担当者に共有する（印刷・PDF保存推奨）'] },
-    { section: 'カウント／棚卸リスト回収／カウント結果入力（送信と同時に自動完了）' },
-    { row: ['3', '手動', 'カウント担当者', '実地棚卸支援ツール', 'QR・リンクを開き、名前を入力→担当（ロケーション等）を選択→実地でカウントした数量を入力して送信する'] },
-    { row: ['3-1', '自動', 'システム', '回答', '入力内容が追記される'] },
-    { row: ['3-2', '自動', 'システム', '集計', '再計算され、帳簿数量と実地数が異なる行が赤く強調表示される'] },
-    { section: '棚卸差異の確認' },
-    { row: ['4', '手動', '管理者', '集計', '差異のある品目は「内訳」列（誰が・いつ・どんなメモで入力したか）を見て、重複入力なのか、本当に複数箇所にあった（分散カウント）のかを判断する'] },
-    { row: ['5', '手動', '管理者', '集計', '是正が必要な場合、該当行の「管理者上書き」に確定数量を、「上書き理由」に理由を入力する（現場での再確認が必要な場合もある）'] },
-    { row: ['6', '手動', '管理者', 'スプレッドシートのメニュー', '「棚卸ツール→🔄 集計を再計算」を実行し、上書き内容を反映させる（上書き入力だけでは自動反映されないため必須）'] },
-    { row: ['6-1', '自動', 'システム', '集計／最終リスト／最終（元レイアウト）', '上書き内容を反映して再計算される'] },
-    { section: '棚卸結果の出力・ダウンロード' },
-    { row: ['7', '手動', '管理者', '最終（元レイアウト）', 'CSV等で出力・ダウンロードし、在庫管理システムへ反映する'] }
+    { section: &#x27;棚卸リスト作成&#x27; },
+    { row: [&#x27;1&#x27;, &#x27;手動&#x27;, &#x27;管理者&#x27;, &#x27;実地棚卸支援ツール&#x27;, &#x27;在庫リストを取込み、列（識別キー・表示名・軸・帳簿数量・単位（任意））を指定する。プレビュー画面で件数・帳簿数量の合計が元データと一致するか確認してから送信する&#x27;] },
+    { row: [&#x27;1-1&#x27;, &#x27;自動&#x27;, &#x27;システム&#x27;, &#x27;マスタ／元データ&#x27;, &#x27;シートが作成され、取り込んだデータが保存される&#x27;] },
+    { row: [&#x27;1-2&#x27;, &#x27;自動&#x27;, &#x27;システム&#x27;, &#x27;集計／最終リスト／最終（元レイアウト）&#x27;, &#x27;シートが作成され、差異・最終結果が計算される&#x27;] },
+    { section: &#x27;棚卸リスト配付&#x27; },
+    { row: [&#x27;2&#x27;, &#x27;手動&#x27;, &#x27;管理者&#x27;, &#x27;実地棚卸支援ツール&#x27;, &#x27;発行されたQRコード・リンクをカウント担当者に共有する（印刷・PDF保存推奨）&#x27;] },
+    { section: &#x27;カウント／棚卸リスト回収／カウント結果入力（送信と同時に自動完了）&#x27; },
+    { row: [&#x27;3&#x27;, &#x27;手動&#x27;, &#x27;カウント担当者&#x27;, &#x27;実地棚卸支援ツール&#x27;, &#x27;QR・リンクを開き、名前を入力→担当（ロケーション等）を選択→実地でカウントした数量を入力して送信する&#x27;] },
+    { row: [&#x27;3-1&#x27;, &#x27;自動&#x27;, &#x27;システム&#x27;, &#x27;回答&#x27;, &#x27;入力内容が追記される&#x27;] },
+    { row: [&#x27;3-2&#x27;, &#x27;自動&#x27;, &#x27;システム&#x27;, &#x27;集計&#x27;, &#x27;再計算され、帳簿数量と実地数が異なる行が赤く強調表示される&#x27;] },
+    { section: &#x27;棚卸差異の確認&#x27; },
+    { row: [&#x27;4&#x27;, &#x27;手動&#x27;, &#x27;管理者&#x27;, &#x27;集計&#x27;, &#x27;差異のある品目は「内訳」列（誰が・いつ・どんなメモで入力したか）を見て、重複入力なのか、本当に複数箇所にあった（分散カウント）のかを判断する&#x27;] },
+    { row: [&#x27;5&#x27;, &#x27;手動&#x27;, &#x27;管理者&#x27;, &#x27;集計&#x27;, &#x27;是正が必要な場合、該当行の「管理者上書き」に確定数量を、「上書き理由」に理由を入力する（現場での再確認が必要な場合もある）&#x27;] },
+    { row: [&#x27;6&#x27;, &#x27;手動&#x27;, &#x27;管理者&#x27;, &#x27;スプレッドシートのメニュー&#x27;, &#x27;「棚卸ツール→🔄 集計を再計算」を実行し、上書き内容を反映させる（上書き入力だけでは自動反映されないため必須）&#x27;] },
+    { row: [&#x27;6-1&#x27;, &#x27;自動&#x27;, &#x27;システム&#x27;, &#x27;集計／最終リスト／最終（元レイアウト）&#x27;, &#x27;上書き内容を反映して再計算される&#x27;] },
+    { section: &#x27;棚卸結果の出力・ダウンロード&#x27; },
+    { row: [&#x27;7&#x27;, &#x27;手動&#x27;, &#x27;管理者&#x27;, &#x27;最終（元レイアウト）&#x27;, &#x27;CSV等で出力・ダウンロードし、在庫管理システムへ反映する&#x27;] }
   ];
 
   sh.clear();
 
-  sh.getRange(1, 1, 1, COLS).setValues([header]).setFontWeight('bold');
-  sh.getRange(1, 1, 1, COLS).setBackground('#e2e5ea');
+  sh.getRange(1, 1, 1, COLS).setValues([header]).setFontWeight(&#x27;bold&#x27;);
+  sh.getRange(1, 1, 1, COLS).setBackground(&#x27;#e2e5ea&#x27;);
 
   let r = 2;
   items.forEach(function (item) {
     if (item.section) {
       // セルの結合はせず、行全体を色付けしてA列にラベルを入れるだけにする
-      sh.getRange(r, 1, 1, COLS).setBackground('#2563eb');
-      sh.getRange(r, 1).setValue(item.section).setFontWeight('bold').setFontColor('#ffffff');
+      sh.getRange(r, 1, 1, COLS).setBackground(&#x27;#2563eb&#x27;);
+      sh.getRange(r, 1).setValue(item.section).setFontWeight(&#x27;bold&#x27;).setFontColor(&#x27;#ffffff&#x27;);
     } else {
       sh.getRange(r, 1, 1, COLS).setValues([item.row]);
-      if (item.row[1] === '手動') {
-        sh.getRange(r, 1, 1, COLS).setBackground('#fff7e6');
+      if (item.row[1] === &#x27;手動&#x27;) {
+        sh.getRange(r, 1, 1, COLS).setBackground(&#x27;#fff7e6&#x27;);
       }
     }
     r++;
   });
   const totalRows = r - 1;
-  sh.getRange(2, 1, totalRows - 1, 1).setNumberFormat('@'); // No.列は"1-1"等の混在を統一して文字列表示にする
+  sh.getRange(2, 1, totalRows - 1, 1).setNumberFormat(&#x27;@&#x27;); // No.列は&quot;1-1&quot;等の混在を統一して文字列表示にする
 
   sh.setColumnWidth(1, 40);
   sh.setColumnWidth(2, 60);
@@ -362,7 +364,7 @@ function ensureSheet_(ss, name, header) {
     sh.setFrozenRows(1);
   }
   // 既存シートでも、コード側の見出し定義が変わった場合に追従できるよう毎回上書きする
-  sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
+  sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight(&#x27;bold&#x27;);
   return sh;
 }
 
@@ -376,45 +378,64 @@ function trimSheet_(sh, usedRows, usedCols) {
 }
 
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu('棚卸ツール')
-    .addItem('🔄 集計を再計算', 'recomputeSummary')
+  SpreadsheetApp.getUi().createMenu(&#x27;棚卸ツール&#x27;)
+    .addItem(&#x27;🔄 集計を再計算&#x27;, &#x27;recomputeSummary&#x27;)
+    .addItem(&#x27;⚙️ カウント担当者への帳簿数量表示を切替&#x27;, &#x27;toggleShowBookQtyToCounter&#x27;)
     .addToUi();
+}
+
+// カウント担当者に帳簿数量を表示するかどうかを、スプレッドシートのメニューから直接切り替える。
+// ウェブアプリURLの入力・接続テストが不要になるよう、あえてHTMLツール側ではなくここに置いている。
+function toggleShowBookQtyToCounter() {
+  const props = PropertiesService.getScriptProperties();
+  const current = props.getProperty(&#x27;showBookQty&#x27;) === &#x27;true&#x27;;
+  const ui = SpreadsheetApp.getUi();
+  const res = ui.alert(
+    &#x27;カウント担当者への帳簿数量表示&#x27;,
+    &#x27;現在の設定：&#x27; + (current ? &#x27;表示する&#x27; : &#x27;表示しない&#x27;) + &#x27;\n\n&#x27; +
+    (current ? &#x27;「表示しない」&#x27; : &#x27;「表示する」&#x27;) + &#x27; に切り替えますか？&#x27;,
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (res !== ui.Button.OK) return;
+  props.setProperty(&#x27;showBookQty&#x27;, current ? &#x27;false&#x27; : &#x27;true&#x27;);
+  ui.alert(&#x27;設定を変更しました：&#x27; + (current ? &#x27;表示しない&#x27; : &#x27;表示する&#x27;));
 }
 
 // ---------------- 設定の保存・読み出し ----------------
 
 function getAxisLabels_() {
-  const raw = PropertiesService.getScriptProperties().getProperty('axisLabels');
+  const raw = PropertiesService.getScriptProperties().getProperty(&#x27;axisLabels&#x27;);
   return raw ? JSON.parse(raw) : [];
 }
 function getOriginalHeaders_() {
-  const raw = PropertiesService.getScriptProperties().getProperty('originalHeaders');
+  const raw = PropertiesService.getScriptProperties().getProperty(&#x27;originalHeaders&#x27;);
   return raw ? JSON.parse(raw) : [];
 }
 function getAxisColIndices_() {
-  const raw = PropertiesService.getScriptProperties().getProperty('axisColIndices');
+  const raw = PropertiesService.getScriptProperties().getProperty(&#x27;axisColIndices&#x27;);
   return raw ? JSON.parse(raw) : [];
 }
 function getBookQtyColIndex_() {
-  const raw = PropertiesService.getScriptProperties().getProperty('bookQtyColIndex');
-  return (raw !== null &amp;&amp; raw !== undefined &amp;&amp; raw !== '') ? Number(raw) : -1;
+  const raw = PropertiesService.getScriptProperties().getProperty(&#x27;bookQtyColIndex&#x27;);
+  return (raw !== null &amp;&amp; raw !== undefined &amp;&amp; raw !== &#x27;&#x27;) ? Number(raw) : -1;
 }
 
 function getConfig() {
   const props = PropertiesService.getScriptProperties();
   return {
-    keyLabel: props.getProperty('keyLabel') || '識別キー',
-    displayLabel: props.getProperty('displayLabel') || '表示名',
-    axisLabels: getAxisLabels_()
+    keyLabel: props.getProperty(&#x27;keyLabel&#x27;) || &#x27;識別キー&#x27;,
+    displayLabel: props.getProperty(&#x27;displayLabel&#x27;) || &#x27;表示名&#x27;,
+    axisLabels: getAxisLabels_(),
+    showBookQty: props.getProperty(&#x27;showBookQty&#x27;) === &#x27;true&#x27;
   };
 }
 
 // ---------------- マスタ取込 ----------------
 
 // body = {
-//   action:'setup',
-//   config:{keyLabel, displayLabel, axisLabels:[...]},
-//   items:[{key, display, axes:[...], bookQty, originalRow:[...]}],
+//   action:&#x27;setup&#x27;,
+//   config:{keyLabel, displayLabel, axisLabels:[...], showBookQty:boolean},
+//   items:[{key, display, axes:[...], bookQty, unit, originalRow:[...]}],
 //   originalHeaders:[...], originalRows:[[...], ...],
 //   axisColIndices:[...], bookQtyColIndex: number
 // }
@@ -423,12 +444,13 @@ function setupMaster(body) {
   const axisLabels = cfg.axisLabels || [];
 
   const props = PropertiesService.getScriptProperties();
-  props.setProperty('keyLabel', cfg.keyLabel || '識別キー');
-  props.setProperty('displayLabel', cfg.displayLabel || '表示名');
-  props.setProperty('axisLabels', JSON.stringify(axisLabels));
-  props.setProperty('originalHeaders', JSON.stringify(body.originalHeaders || []));
-  props.setProperty('axisColIndices', JSON.stringify(body.axisColIndices || []));
-  props.setProperty('bookQtyColIndex', String(body.bookQtyColIndex != null ? body.bookQtyColIndex : -1));
+  props.setProperty(&#x27;keyLabel&#x27;, cfg.keyLabel || &#x27;識別キー&#x27;);
+  props.setProperty(&#x27;displayLabel&#x27;, cfg.displayLabel || &#x27;表示名&#x27;);
+  props.setProperty(&#x27;axisLabels&#x27;, JSON.stringify(axisLabels));
+  props.setProperty(&#x27;showBookQty&#x27;, cfg.showBookQty ? &#x27;true&#x27; : &#x27;false&#x27;);
+  props.setProperty(&#x27;originalHeaders&#x27;, JSON.stringify(body.originalHeaders || []));
+  props.setProperty(&#x27;axisColIndices&#x27;, JSON.stringify(body.axisColIndices || []));
+  props.setProperty(&#x27;bookQtyColIndex&#x27;, String(body.bookQtyColIndex != null ? body.bookQtyColIndex : -1));
 
   // シートの並び順を「元データ→マスタ→回答→集計→最終リスト→最終（元レイアウト）」にするため、
   // 元データを先に作成しておく
@@ -447,7 +469,7 @@ function setupMaster(body) {
   const items = body.items || [];
   const rows = items.map(function (it) {
     const axes = it.axes || [];
-    return [it.key, it.display].concat(axes).concat([Number(it.bookQty) || 0, JSON.stringify(it.originalRow || [])]);
+    return [it.key, it.display].concat(axes).concat([Number(it.bookQty) || 0, it.unit || &#x27;&#x27;, JSON.stringify(it.originalRow || [])]);
   });
   if (rows.length &gt; 0) {
     sh.getRange(2, 1, rows.length, header.length).setValues(rows);
@@ -455,7 +477,7 @@ function setupMaster(body) {
   trimSheet_(sh, rows.length + 1, header.length);
 
   recomputeSummary();
-  return { ok: true, count: rows.length };
+  return { ok: true, count: rows.length, spreadsheetUrl: SpreadsheetApp.getActiveSpreadsheet().getUrl() };
 }
 
 function getMasterData() {
@@ -469,9 +491,9 @@ function getMasterData() {
   if (lastRow &lt; 2) return [];
   const values = sh.getRange(2, 1, lastRow - 1, headerLen).getValues();
   return values
-    .filter(function (r) { return r[0] !== '' &amp;&amp; r[0] !== null; })
+    .filter(function (r) { return r[0] !== &#x27;&#x27; &amp;&amp; r[0] !== null; })
     .map(function (r) {
-      return { key: r[0], display: r[1], axes: r.slice(2, 2 + n), bookQty: r[2 + n] };
+      return { key: r[0], display: r[1], axes: r.slice(2, 2 + n), bookQty: r[2 + n], unit: r[2 + n + 1] };
     });
 }
 
@@ -487,7 +509,7 @@ function writeOriginalDataSheet_(originalHeaders, originalRows) {
 
 // ---------------- カウント結果の受付 ----------------
 
-// body = { action:'submitCounts', name:'担当者名', items:[{key, axes:[...], qty, memo}, ...] }
+// body = { action:&#x27;submitCounts&#x27;, name:&#x27;担当者名&#x27;, items:[{key, axes:[...], qty, memo}, ...] }
 function submitCounts(body) {
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
@@ -498,11 +520,11 @@ function submitCounts(body) {
     const axisLabels = getAxisLabels_();
     const header = answersHeader_(axisLabels);
     const now = new Date();
-    const name = body.name || '';
+    const name = body.name || &#x27;&#x27;;
     const items = body.items || [];
     const rows = items.map(function (it) {
       const axes = it.axes || [];
-      return [now, name, it.key].concat(axes).concat([Number(it.qty) || 0, it.memo || '']);
+      return [now, name, it.key].concat(axes).concat([Number(it.qty) || 0, it.memo || &#x27;&#x27;]);
     });
     if (rows.length &gt; 0) {
       sh.getRange(sh.getLastRow() + 1, 1, rows.length, header.length).setValues(rows);
@@ -558,14 +580,15 @@ function recomputeSummary() {
     axisStart: 1,
     display: n + 1,
     bookQty: n + 2,
-    actualSum: n + 3,
-    inputCount: n + 4,
-    displayActual: n + 5,
-    diff: n + 6,
-    breakdown: n + 7,
-    override: n + 8,
-    reason: n + 9,
-    finalQty: n + 10
+    unit: n + 3,
+    actualSum: n + 4,
+    inputCount: n + 5,
+    displayActual: n + 6,
+    diff: n + 7,
+    breakdown: n + 8,
+    override: n + 9,
+    reason: n + 10,
+    finalQty: n + 11
   };
 
   // 既存の管理者上書き・理由を保持
@@ -576,14 +599,15 @@ function recomputeSummary() {
     overrideMap[k] = { override: r[idx.override], reason: r[idx.reason] };
   });
 
-  // マスタ側キー: [識別キー, 表示名, 軸(n), 帳簿数量, 元データ(JSON)]
+  // マスタ側キー: [識別キー, 表示名, 軸(n), 帳簿数量, 単位, 元データ(JSON)]
   const bookMap = {};
   masterRows.forEach(function (r) {
-    if (r[0] === '' || r[0] === null) return;
+    if (r[0] === &#x27;&#x27; || r[0] === null) return;
     const axes = r.slice(2, 2 + n);
     const bookQty = Number(r[2 + n]) || 0;
+    const unit = r[2 + n + 1] || &#x27;&#x27;;
     const key = combineKey_(r[0], axes);
-    bookMap[key] = { idKey: r[0], display: r[1], axes: axes, bookQty: bookQty };
+    bookMap[key] = { idKey: r[0], display: r[1], axes: axes, bookQty: bookQty, unit: unit };
   });
 
   // 回答側の合算（担当者名・メモも内訳表示用に保持）: [タイムスタンプ, 担当者名, 識別キー, 軸(n), 数量, メモ]
@@ -592,8 +616,8 @@ function recomputeSummary() {
     const name = r[1], idKey = r[2];
     const axes = r.slice(3, 3 + n);
     const qty = Number(r[3 + n]) || 0;
-    const memo = r[3 + n + 1] || '';
-    if (idKey === '' || idKey === null) return;
+    const memo = r[3 + n + 1] || &#x27;&#x27;;
+    if (idKey === &#x27;&#x27; || idKey === null) return;
     const key = combineKey_(idKey, axes);
     if (!ansAgg[key]) ansAgg[key] = { sum: 0, count: 0, idKey: idKey, axes: axes, details: [] };
     ansAgg[key].sum += qty;
@@ -610,21 +634,22 @@ function recomputeSummary() {
     const book = bookMap[key];
     const ans = ansAgg[key];
     const idKey = book ? book.idKey : ans.idKey;
-    const display = book ? book.display : '';
+    const display = book ? book.display : &#x27;&#x27;;
     const axes = book ? book.axes : ans.axes;
     const bookQty = book ? book.bookQty : 0;
+    const unit = book ? book.unit : &#x27;&#x27;;
     const actualSum = ans ? ans.sum : 0;
     const inputCount = ans ? ans.count : 0;
     const displayActual = inputCount === 0 ? bookQty : actualSum;
     const diff = displayActual - bookQty;
 
     const prev = overrideMap[key] || {};
-    const override = (prev.override === undefined || prev.override === null) ? '' : prev.override;
-    const reason = prev.reason || '';
-    const finalQty = (override !== '') ? Number(override) : displayActual;
+    const override = (prev.override === undefined || prev.override === null) ? &#x27;&#x27; : prev.override;
+    const reason = prev.reason || &#x27;&#x27;;
+    const finalQty = (override !== &#x27;&#x27;) ? Number(override) : displayActual;
     const breakdown = buildBreakdown_(ans);
 
-    const row = [idKey].concat(axes).concat([display, bookQty, actualSum, inputCount, displayActual, diff, breakdown, override, reason, finalQty]);
+    const row = [idKey].concat(axes).concat([display, bookQty, unit, actualSum, inputCount, displayActual, diff, breakdown, override, reason, finalQty]);
     outRows.push(row);
   });
 
@@ -660,21 +685,21 @@ function reorderSheets_() {
 }
 
 function combineKey_(idKey, axes) {
-  function norm(v) { return (v === null || v === undefined) ? '' : String(v); }
-  return norm(idKey) + '|' + (axes || []).map(norm).join('|');
+  function norm(v) { return (v === null || v === undefined) ? &#x27;&#x27; : String(v); }
+  return norm(idKey) + &#x27;|&#x27; + (axes || []).map(norm).join(&#x27;|&#x27;);
 }
 
 function buildBreakdown_(ans) {
-  if (!ans || !ans.details || ans.details.length === 0) return '';
+  if (!ans || !ans.details || ans.details.length === 0) return &#x27;&#x27;;
   return ans.details.map(function (d) {
-    let label = (d.name || '(名前なし)') + ':' + d.qty;
-    if (d.memo) label += '(' + d.memo + ')';
+    let label = (d.name || &#x27;(名前なし)&#x27;) + &#x27;:&#x27; + d.qty;
+    if (d.memo) label += &#x27;(&#x27; + d.memo + &#x27;)&#x27;;
     return label;
-  }).join(' / ');
+  }).join(&#x27; / &#x27;);
 }
 
 function colLetter_(colNum1based) {
-  let s = '', n = colNum1based;
+  let s = &#x27;&#x27;, n = colNum1based;
   while (n &gt; 0) {
     const m = (n - 1) % 26;
     s = String.fromCharCode(65 + m) + s;
@@ -687,10 +712,10 @@ function applyConditionalFormatting_(sh, diffIdx, totalCols) {
   sh.clearConditionalFormatRules();
   const lastColLetter = colLetter_(totalCols);
   const diffColLetter = colLetter_(diffIdx + 1);
-  const range = sh.getRange('A2:' + lastColLetter + '2000');
+  const range = sh.getRange(&#x27;A2:&#x27; + lastColLetter + &#x27;2000&#x27;);
   const rule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=$' + diffColLetter + '2&lt;&gt;0')
-    .setBackground('#fce8e6')
+    .whenFormulaSatisfied(&#x27;=$&#x27; + diffColLetter + &#x27;2&lt;&gt;0&#x27;)
+    .setBackground(&#x27;#fce8e6&#x27;)
     .setRanges([range])
     .build();
   sh.setConditionalFormatRules([rule]);
@@ -708,8 +733,9 @@ function updateFinalList_(outRows, axisLabels, idx) {
     const idKey = r[idx.idKey];
     const axes = r.slice(idx.axisStart, idx.axisStart + axisLabels.length);
     const display = r[idx.display];
+    const unit = r[idx.unit];
     const finalQty = r[idx.finalQty];
-    return [idKey, display].concat(axes).concat([finalQty]);
+    return [idKey, display].concat(axes).concat([unit, finalQty]);
   });
   if (rows.length &gt; 0) {
     sh.getRange(2, 1, rows.length, header.length).setValues(rows);
@@ -738,7 +764,7 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
   const templateByKey = {};
   masterRows.forEach(function (r) {
     const idKey = r[0];
-    if (idKey === '' || idKey === null) return;
+    if (idKey === &#x27;&#x27; || idKey === null) return;
     if (!templateByKey[idKey]) {
       try { templateByKey[idKey] = JSON.parse(r[jsonColIdx]); } catch (e) { /* ignore */ }
     }
@@ -803,7 +829,7 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
     <h1>🗂️ 管理者設定</h1>
     <div class="step-indicator"><div class="done"></div><div class="done"></div><div></div><div></div></div>
     <div class="card">
-      <h2>②在庫リストの取込</h2>
+      <h2>③在庫リストの取込</h2>
       <p class="note">CSVまたはExcelファイルを選択してください。1行目が列見出しの想定です。</p>
       <input type="file" id="input-file" accept=".csv,.xlsx,.xls">
     </div>
@@ -815,14 +841,24 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
     <h1>🗂️ 管理者設定</h1>
     <div class="step-indicator"><div class="done"></div><div class="done"></div><div class="done"></div><div></div></div>
     <div class="card">
-      <h2>③列の役割を指定</h2>
+      <h2>④列の役割を指定</h2>
       <p class="note">
         各列が何を表すか選んでください。<b>識別キー</b>は同一物と判定する項目（複数列選択可、例：品番＋枝番）。
         <b>軸</b>はカウント担当を分けるための項目（ロケーション・組織等、複数列選択可・任意）。<b>帳簿数量</b>は必須です。
+        <b>単位</b>は任意（個・kg・箱など、品目ごとに異なる単位が入った列）。
       </p>
       <div style="overflow-x:auto;">
         <table class="map-table" id="mapping-table"></table>
       </div>
+    </div>
+    <div class="card">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0;">
+        <input type="checkbox" id="input-show-bookqty" style="width:auto;margin:0;">
+        <span>カウント担当者にも帳簿数量を表示する（既定：非表示）</span>
+      </label>
+      <p class="note" style="margin-top:8px;margin-bottom:0;">
+        表示すると入力中に大きなズレへその場で気づけますが、数字を見て合わせてしまい、本来の差異チェックの精度が下がるおそれがあります。この設定はセットアップ後、Googleスプレッドシートのメニュー「棚卸ツール→⚙️ カウント担当者への帳簿数量表示を切替」からも変更できます。
+      </p>
     </div>
     <button class="btn" onclick="confirmMapping()">次へ（プレビュー）</button>
     <button class="btn secondary" onclick="showScreen('screen-admin-import')">戻る</button>
@@ -833,13 +869,13 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
     <h1>🗂️ 管理者設定</h1>
     <div class="step-indicator"><div class="done"></div><div class="done"></div><div class="done"></div><div class="done"></div></div>
     <div class="card">
-      <h2>④内容の確認・送信</h2>
+      <h2>⑤内容の確認・送信</h2>
       <div id="preview-summary"></div>
       <div style="overflow-x:auto;max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
         <table class="map-table" id="preview-table"></table>
       </div>
     </div>
-    <button class="btn" onclick="sendSetup()">この内容で集計先に送信する</button>
+    <button class="btn" id="btn-send-setup" onclick="sendSetup()">この内容で集計先に送信する</button>
     <button class="btn secondary" onclick="showScreen('screen-admin-mapping')">戻る</button>
   </div>
 
@@ -847,7 +883,12 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
   <div class="screen" id="screen-admin-qr">
     <h1>🗂️ 管理者設定</h1>
     <div class="card">
-      <h2>✅ 送信完了：棚卸リストへのQRコード・リンクを発行しました</h2>
+      <h2>✅ 送信完了：Googleスプレッドシートにデータを書き込みました</h2>
+      <p style="font-weight:700;" id="setup-count-text"></p>
+      <a class="btn secondary small" id="spreadsheet-link-btn" href="#" target="_blank" rel="noopener">📊 スプレッドシートを開く</a>
+    </div>
+    <div class="card">
+      <h2>✅ 棚卸リストへのQRコード・リンクを発行しました</h2>
       <p style="font-weight:700;">下のQRコード、またはリンクをカウント担当者に共有してください。</p>
       <p class="note">※ このURLは後から取得し直すのがやや手間です。この画面を印刷するか、PDFとして保存しておくことをお勧めします（ブラウザの印刷機能をご利用ください）。</p>
       <div id="qr-canvas" style="display:flex;justify-content:center;margin:16px auto;"></div>
@@ -906,9 +947,9 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
     <div class="counter-name-bar">👤 <span class="name counter-name-text"></span><button type="button" onclick="changeCounterName()">別の名前で入力する</button></div>
     <div class="card" style="margin-bottom:8px;">
       <div class="progress-line"><span id="counter-axis-label"></span><span id="counter-progress"></span></div>
-      <input type="text" class="search-box" id="counter-search" placeholder="品番・品名で検索" oninput="renderItemList()">
-      <button class="btn secondary small" onclick="showScreen('screen-counter-searchall')">🔍 この一覧にない品番を追加する</button>
-      <p class="note" style="margin-top:6px;margin-bottom:0;">※ 担当エリアで見つけたのに一覧に出てこない品番がある場合は、こちらから検索して追加してください。</p>
+      <input type="text" class="search-box" id="counter-search" placeholder="品目・品名で検索" oninput="renderItemList()">
+      <button class="btn secondary small" onclick="showScreen('screen-counter-searchall')">🔍 この一覧にない品目を追加する</button>
+      <p class="note" style="margin-top:6px;margin-bottom:0;">※ 担当エリアで見つけたのに一覧に出てこない品目がある場合は、こちらから検索して追加してください。</p>
     </div>
     <h2>品目をタップして数量を入力してください</h2>
     <div id="item-list"></div>
@@ -923,14 +964,14 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
     </div>
   </div>
 
-  <!-- ============ カウント担当者：全体検索（この一覧にない品番） ============ -->
+  <!-- ============ カウント担当者：全体検索（この一覧にない品目） ============ -->
   <div class="screen" id="screen-counter-searchall">
     <h1>📱 カウント入力</h1>
     <div class="counter-name-bar">👤 <span class="name counter-name-text"></span><button type="button" onclick="changeCounterName()">別の名前で入力する</button></div>
     <div class="card">
       <h2>🔍 マスタ全体から探す</h2>
-      <p class="note">今の担当エリアの一覧に出てこない品番を見つけた場合はここで検索し、追加してください。追加すると、あなたの現在の担当（<span id="searchall-axis-label"></span>）としてカウントされます。</p>
-      <input type="text" id="counter-search-all" placeholder="品番・品名で検索" oninput="renderSearchAllResults()">
+      <p class="note">今の担当エリアの一覧に出てこない品目を見つけた場合はここで検索し、追加してください。追加すると、あなたの現在の担当（<span id="searchall-axis-label"></span>）としてカウントされます。</p>
+      <input type="text" id="counter-search-all" placeholder="品目・品名で検索" oninput="renderSearchAllResults()">
       <div id="searchall-results"></div>
     </div>
     <button class="btn secondary" onclick="showScreen('screen-counter-list')">一覧に戻る</button>
@@ -993,7 +1034,7 @@ let admin = {
 let counter = {
   gasUrl:'',
   name:'',
-  config:{ keyLabel:'識別キー', displayLabel:'表示名', axisLabels:[] },
+  config:{ keyLabel:'識別キー', displayLabel:'表示名', axisLabels:[], showBookQty:false },
   masterItems:[],
   axisValues:[],
   filteredItems:[],
@@ -1089,10 +1130,11 @@ function buildMappingTable(){
     html += '<tr><td>'+escapeHtml(h)+'</td><td>'+
       '<select onchange="setColRole('+i+', this.value)">'+
       '<option value="">使わない</option>'+
-      '<option value="key">識別キー</option>'+
-      '<option value="display">表示名</option>'+
-      '<option value="axis">軸（分割用）</option>'+
-      '<option value="bookQty">帳簿数量</option>'+
+      '<option value="key">識別キー（必須）</option>'+
+      '<option value="display">表示名（任意）</option>'+
+      '<option value="axis">軸（分割用・任意）</option>'+
+      '<option value="bookQty">帳簿数量（必須）</option>'+
+      '<option value="unit">単位（任意）</option>'+
       '</select></td></tr>';
   });
   table.innerHTML = html;
@@ -1122,12 +1164,13 @@ function escapeHtml(s){
 function confirmMapping(){
   const keyIdx = [];
   const axisIdx = [];
-  let displayIdx=-1, bookQtyIdx=-1;
+  let displayIdx=-1, bookQtyIdx=-1, unitIdx=-1;
   admin.colRoles.forEach(function(r, i){
     if(r==='key') keyIdx.push(i);
     if(r==='display') displayIdx=i;
     if(r==='axis') axisIdx.push(i);
     if(r==='bookQty') bookQtyIdx=i;
+    if(r==='unit') unitIdx=i;
   });
   if(keyIdx.length===0){ alert('識別キーを最低1列は指定してください。'); return; }
   if(bookQtyIdx===-1){ alert('帳簿数量の列を指定してください。'); return; }
@@ -1139,6 +1182,7 @@ function confirmMapping(){
       display: displayIdx>-1 ? String(r[displayIdx]) : '',
       axes: axisIdx.map(function(ai){ return String(r[ai]); }),
       bookQty: Number(r[bookQtyIdx])||0,
+      unit: unitIdx>-1 ? String(r[unitIdx]) : '',
       originalRow: r
     };
   }).filter(function(it){ return it.key !== ''; });
@@ -1146,7 +1190,8 @@ function confirmMapping(){
   admin.config = {
     keyLabel: keyIdx.map(function(ki){ return admin.headers[ki]; }).join('+'),
     displayLabel: displayIdx>-1 ? admin.headers[displayIdx] : '',
-    axisLabels: axisIdx.map(function(ai){ return admin.headers[ai]; })
+    axisLabels: axisIdx.map(function(ai){ return admin.headers[ai]; }),
+    showBookQty: document.getElementById('input-show-bookqty').checked
   };
   admin.axisColIndices = axisIdx;
   admin.bookQtyColIndex = bookQtyIdx;
@@ -1167,25 +1212,31 @@ function renderPreview(){
       '⚠️ 送信前に、元の在庫管理システム側の件数・数量合計と必ず一致確認してください。'+
     '</div>'+
     '<p>識別キー：'+escapeHtml(admin.config.keyLabel)+' ／ 表示名：'+escapeHtml(admin.config.displayLabel||'（未設定）')+
-    ' ／ 軸：'+(axisLabels.length ? escapeHtml(axisLabels.join('、')) : '（未使用）')+'</p>';
+    ' ／ 軸：'+(axisLabels.length ? escapeHtml(axisLabels.join('、')) : '（未使用）')+
+    ' ／ カウント担当者への帳簿数量表示：'+(admin.config.showBookQty ? '表示する' : '表示しない')+'</p>';
   document.getElementById('preview-summary').innerHTML = summaryHtml;
   const axisHeaderHtml = axisLabels.map(function(l){ return '<th>'+escapeHtml(l)+'</th>'; }).join('');
-  let html = '<tr><th>識別キー</th><th>表示名</th>'+axisHeaderHtml+'<th>帳簿数量</th></tr>';
+  let html = '<tr><th>識別キー</th><th>表示名</th>'+axisHeaderHtml+'<th>帳簿数量</th><th>単位</th></tr>';
   admin.items.slice(0,50).forEach(function(it){
     const axisCellsHtml = it.axes.map(function(v){ return '<td>'+escapeHtml(v)+'</td>'; }).join('');
-    html += '<tr><td>'+escapeHtml(it.key)+'</td><td>'+escapeHtml(it.display)+'</td>'+axisCellsHtml+'<td>'+it.bookQty+'</td></tr>';
+    html += '<tr><td>'+escapeHtml(it.key)+'</td><td>'+escapeHtml(it.display)+'</td>'+axisCellsHtml+'<td>'+it.bookQty+'</td><td>'+escapeHtml(it.unit||'')+'</td></tr>';
   });
   document.getElementById('preview-table').innerHTML = html;
 }
 
 async function sendSetup(){
+  const btn = document.getElementById('btn-send-setup');
+  if(btn.disabled) return; // 連打防止（送信〜スプレッドシート反映完了まで数秒かかるため）
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '送信中...';
   try{
     toast('送信中...');
     const res = await gasPost(admin.gasUrl, {
       action:'setup',
       config: admin.config,
       items: admin.items.map(function(it){
-        return { key:it.key, display:it.display, axes:it.axes, bookQty:it.bookQty, originalRow:it.originalRow };
+        return { key:it.key, display:it.display, axes:it.axes, bookQty:it.bookQty, unit:it.unit, originalRow:it.originalRow };
       }),
       originalHeaders: admin.headers,
       originalRows: admin.rows,
@@ -1193,13 +1244,21 @@ async function sendSetup(){
       bookQtyColIndex: admin.bookQtyColIndex
     });
     if(res.ok){
+      btn.disabled = false;
+      btn.textContent = originalText;
+      document.getElementById('setup-count-text').textContent = (res.count||0) + '件のデータを書き込みました。';
+      document.getElementById('spreadsheet-link-btn').href = res.spreadsheetUrl || '#';
       renderShareLink();
       showScreen('screen-admin-qr');
     } else {
       alert('送信に失敗しました：' + (res.error||''));
+      btn.disabled = false;
+      btn.textContent = originalText;
     }
   }catch(err){
     alert('送信エラー：' + err);
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
 }
 
@@ -1428,10 +1487,12 @@ function renderItemList(){
       '<div class="expand">'+
         '<div class="big-name">'+escapeHtml(it.display||'(表示名なし)')+'</div>'+
         '<div class="big-key">'+escapeHtml(it.key)+'</div>'+
+        (counter.config.showBookQty ? '<p class="note book-qty-note">帳簿数量：<b>'+escapeHtml(String(it.bookQty!=null?it.bookQty:0))+(it.unit?(' '+escapeHtml(it.unit)):'')+'</b></p>' : '')+
         '<label class="field-label">実地でカウントした数量</label>'+
         '<div class="qty-control">'+
           '<button type="button" data-action="dec">－</button>'+
           '<input type="number" inputmode="numeric" value="'+(d.qty!=null?d.qty:'')+'" placeholder="0" data-action="qty-input">'+
+          (it.unit ? '<span class="qty-unit">'+escapeHtml(it.unit)+'</span>' : '')+
           '<button type="button" data-action="inc">＋</button>'+
         '</div>'+
         '<p class="note" style="margin-top:-6px;">※ 見つからない場合も「0」を入力してください。未入力のままだと「まだ数えていない」扱いになります。</p>'+
@@ -1522,7 +1583,7 @@ function addFoundItem(key){
   if(!it) return;
   const d = ensureDraft(key);
   d.added = true;
-  d.itemRef = { key: it.key, display: it.display, axes: counter.axisValues.slice(), bookQty: it.bookQty };
+  d.itemRef = { key: it.key, display: it.display, axes: counter.axisValues.slice(), bookQty: it.bookQty, unit: it.unit };
   saveDraftToStorage();
   filterItemsForAxis();
   toast('一覧に追加しました');

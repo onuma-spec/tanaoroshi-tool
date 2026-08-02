@@ -39,16 +39,16 @@ const SHEET_FINAL_ORIGINAL = '最終（元レイアウト）';
 // ---------------- ヘッダー定義（軸の数に応じて可変） ----------------
 
 function masterHeader_(axisLabels) {
-  return ['識別キー', '表示名'].concat(axisLabels).concat(['帳簿数量', '元データ(JSON)']);
+  return ['識別キー', '表示名'].concat(axisLabels).concat(['帳簿数量', '単位', '元データ(JSON)']);
 }
 function answersHeader_(axisLabels) {
   return ['タイムスタンプ', '担当者名', '識別キー'].concat(axisLabels).concat(['数量', '場所メモ']);
 }
 function summaryHeader_(axisLabels) {
-  return ['識別キー'].concat(axisLabels).concat(['表示名', '帳簿数量', '実地数（合算）', '入力件数', '表示用実地数', '差異', '内訳（担当者:数量(メモ)）', '管理者上書き', '上書き理由', '最終実地数']);
+  return ['識別キー'].concat(axisLabels).concat(['表示名', '帳簿数量', '単位', '実地数（合算）', '入力件数', '表示用実地数', '差異', '内訳（担当者:数量(メモ)）', '管理者上書き', '上書き理由', '最終実地数']);
 }
 function finalHeader_(axisLabels) {
-  return ['識別キー', '表示名'].concat(axisLabels).concat(['最終数量']);
+  return ['識別キー', '表示名'].concat(axisLabels).concat(['単位', '最終数量']);
 }
 
 // ---------------- エントリーポイント ----------------
@@ -123,7 +123,7 @@ function writeUsageGuideSheet_() {
   // カウント・回収・結果入力は、送信と同時に自動完了するため1セクションに統合している。
   const items = [
     { section: '棚卸リスト作成' },
-    { row: ['1', '手動', '管理者', '実地棚卸支援ツール', '在庫リストを取込み、列（識別キー・表示名・軸・帳簿数量）を指定する。プレビュー画面で件数・帳簿数量の合計が元データと一致するか確認してから送信する'] },
+    { row: ['1', '手動', '管理者', '実地棚卸支援ツール', '在庫リストを取込み、列（識別キー・表示名・軸・帳簿数量・単位（任意））を指定する。プレビュー画面で件数・帳簿数量の合計が元データと一致するか確認してから送信する'] },
     { row: ['1-1', '自動', 'システム', 'マスタ／元データ', 'シートが作成され、取り込んだデータが保存される'] },
     { row: ['1-2', '自動', 'システム', '集計／最終リスト／最終（元レイアウト）', 'シートが作成され、差異・最終結果が計算される'] },
     { section: '棚卸リスト配付' },
@@ -197,7 +197,25 @@ function trimSheet_(sh, usedRows, usedCols) {
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('棚卸ツール')
     .addItem('🔄 集計を再計算', 'recomputeSummary')
+    .addItem('⚙️ カウント担当者への帳簿数量表示を切替', 'toggleShowBookQtyToCounter')
     .addToUi();
+}
+
+// カウント担当者に帳簿数量を表示するかどうかを、スプレッドシートのメニューから直接切り替える。
+// ウェブアプリURLの入力・接続テストが不要になるよう、あえてHTMLツール側ではなくここに置いている。
+function toggleShowBookQtyToCounter() {
+  const props = PropertiesService.getScriptProperties();
+  const current = props.getProperty('showBookQty') === 'true';
+  const ui = SpreadsheetApp.getUi();
+  const res = ui.alert(
+    'カウント担当者への帳簿数量表示',
+    '現在の設定：' + (current ? '表示する' : '表示しない') + '\n\n' +
+    (current ? '「表示しない」' : '「表示する」') + ' に切り替えますか？',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (res !== ui.Button.OK) return;
+  props.setProperty('showBookQty', current ? 'false' : 'true');
+  ui.alert('設定を変更しました：' + (current ? '表示しない' : '表示する'));
 }
 
 // ---------------- 設定の保存・読み出し ----------------
@@ -224,7 +242,8 @@ function getConfig() {
   return {
     keyLabel: props.getProperty('keyLabel') || '識別キー',
     displayLabel: props.getProperty('displayLabel') || '表示名',
-    axisLabels: getAxisLabels_()
+    axisLabels: getAxisLabels_(),
+    showBookQty: props.getProperty('showBookQty') === 'true'
   };
 }
 
@@ -232,8 +251,8 @@ function getConfig() {
 
 // body = {
 //   action:'setup',
-//   config:{keyLabel, displayLabel, axisLabels:[...]},
-//   items:[{key, display, axes:[...], bookQty, originalRow:[...]}],
+//   config:{keyLabel, displayLabel, axisLabels:[...], showBookQty:boolean},
+//   items:[{key, display, axes:[...], bookQty, unit, originalRow:[...]}],
 //   originalHeaders:[...], originalRows:[[...], ...],
 //   axisColIndices:[...], bookQtyColIndex: number
 // }
@@ -245,6 +264,7 @@ function setupMaster(body) {
   props.setProperty('keyLabel', cfg.keyLabel || '識別キー');
   props.setProperty('displayLabel', cfg.displayLabel || '表示名');
   props.setProperty('axisLabels', JSON.stringify(axisLabels));
+  props.setProperty('showBookQty', cfg.showBookQty ? 'true' : 'false');
   props.setProperty('originalHeaders', JSON.stringify(body.originalHeaders || []));
   props.setProperty('axisColIndices', JSON.stringify(body.axisColIndices || []));
   props.setProperty('bookQtyColIndex', String(body.bookQtyColIndex != null ? body.bookQtyColIndex : -1));
@@ -266,7 +286,7 @@ function setupMaster(body) {
   const items = body.items || [];
   const rows = items.map(function (it) {
     const axes = it.axes || [];
-    return [it.key, it.display].concat(axes).concat([Number(it.bookQty) || 0, JSON.stringify(it.originalRow || [])]);
+    return [it.key, it.display].concat(axes).concat([Number(it.bookQty) || 0, it.unit || '', JSON.stringify(it.originalRow || [])]);
   });
   if (rows.length > 0) {
     sh.getRange(2, 1, rows.length, header.length).setValues(rows);
@@ -274,7 +294,7 @@ function setupMaster(body) {
   trimSheet_(sh, rows.length + 1, header.length);
 
   recomputeSummary();
-  return { ok: true, count: rows.length };
+  return { ok: true, count: rows.length, spreadsheetUrl: SpreadsheetApp.getActiveSpreadsheet().getUrl() };
 }
 
 function getMasterData() {
@@ -290,7 +310,7 @@ function getMasterData() {
   return values
     .filter(function (r) { return r[0] !== '' && r[0] !== null; })
     .map(function (r) {
-      return { key: r[0], display: r[1], axes: r.slice(2, 2 + n), bookQty: r[2 + n] };
+      return { key: r[0], display: r[1], axes: r.slice(2, 2 + n), bookQty: r[2 + n], unit: r[2 + n + 1] };
     });
 }
 
@@ -377,14 +397,15 @@ function recomputeSummary() {
     axisStart: 1,
     display: n + 1,
     bookQty: n + 2,
-    actualSum: n + 3,
-    inputCount: n + 4,
-    displayActual: n + 5,
-    diff: n + 6,
-    breakdown: n + 7,
-    override: n + 8,
-    reason: n + 9,
-    finalQty: n + 10
+    unit: n + 3,
+    actualSum: n + 4,
+    inputCount: n + 5,
+    displayActual: n + 6,
+    diff: n + 7,
+    breakdown: n + 8,
+    override: n + 9,
+    reason: n + 10,
+    finalQty: n + 11
   };
 
   // 既存の管理者上書き・理由を保持
@@ -395,14 +416,15 @@ function recomputeSummary() {
     overrideMap[k] = { override: r[idx.override], reason: r[idx.reason] };
   });
 
-  // マスタ側キー: [識別キー, 表示名, 軸(n), 帳簿数量, 元データ(JSON)]
+  // マスタ側キー: [識別キー, 表示名, 軸(n), 帳簿数量, 単位, 元データ(JSON)]
   const bookMap = {};
   masterRows.forEach(function (r) {
     if (r[0] === '' || r[0] === null) return;
     const axes = r.slice(2, 2 + n);
     const bookQty = Number(r[2 + n]) || 0;
+    const unit = r[2 + n + 1] || '';
     const key = combineKey_(r[0], axes);
-    bookMap[key] = { idKey: r[0], display: r[1], axes: axes, bookQty: bookQty };
+    bookMap[key] = { idKey: r[0], display: r[1], axes: axes, bookQty: bookQty, unit: unit };
   });
 
   // 回答側の合算（担当者名・メモも内訳表示用に保持）: [タイムスタンプ, 担当者名, 識別キー, 軸(n), 数量, メモ]
@@ -432,6 +454,7 @@ function recomputeSummary() {
     const display = book ? book.display : '';
     const axes = book ? book.axes : ans.axes;
     const bookQty = book ? book.bookQty : 0;
+    const unit = book ? book.unit : '';
     const actualSum = ans ? ans.sum : 0;
     const inputCount = ans ? ans.count : 0;
     const displayActual = inputCount === 0 ? bookQty : actualSum;
@@ -443,7 +466,7 @@ function recomputeSummary() {
     const finalQty = (override !== '') ? Number(override) : displayActual;
     const breakdown = buildBreakdown_(ans);
 
-    const row = [idKey].concat(axes).concat([display, bookQty, actualSum, inputCount, displayActual, diff, breakdown, override, reason, finalQty]);
+    const row = [idKey].concat(axes).concat([display, bookQty, unit, actualSum, inputCount, displayActual, diff, breakdown, override, reason, finalQty]);
     outRows.push(row);
   });
 
@@ -527,8 +550,9 @@ function updateFinalList_(outRows, axisLabels, idx) {
     const idKey = r[idx.idKey];
     const axes = r.slice(idx.axisStart, idx.axisStart + axisLabels.length);
     const display = r[idx.display];
+    const unit = r[idx.unit];
     const finalQty = r[idx.finalQty];
-    return [idKey, display].concat(axes).concat([finalQty]);
+    return [idKey, display].concat(axes).concat([unit, finalQty]);
   });
   if (rows.length > 0) {
     sh.getRange(2, 1, rows.length, header.length).setValues(rows);
