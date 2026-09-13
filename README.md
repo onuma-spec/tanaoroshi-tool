@@ -19,8 +19,8 @@ https://onuma-spec.github.io/tanaoroshi-tool/
 データは各社自身のGoogleアカウント内にのみ保存され、本ツール（GitHub Pages）側には一切残りません。
 
 ## サンプルデータで試す
-`https://onuma-spec.github.io/tanaoroshi-tool/?demo=1` で開くと、③在庫リストの取込・④列マッピングの入力を省略し、実データなしでセットアップ自体とセットアップ後の操作感を試せます。
-※ ①②（Googleスプレッドシート・GASの準備）は通常通り必要です。
+https://onuma-spec.github.io/tanaoroshi-tool/?demo=1 で開くと、在庫リストの取込・列マッピングの入力を省略し、実データなしでセットアップ自体とセットアップ後の操作感を試せます。
+※ Googleスプレッドシート・GASの準備は通常通り必要です。
 
 ## ライセンス
 MIT License
