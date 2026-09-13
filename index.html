@@ -132,7 +132,7 @@
       </div>
     </div>
     <button class="btn" onclick="showScreen('screen-start')">利用を開始する</button>
-    <p class="note" id="demo-entry-note" style="margin-top:8px;"><a href="?demo=1" style="color:var(--accent);">🔍 まずはサンプルデータで試す</a></p>
+    <p class="warn-banner" id="demo-entry-note" style="margin-top:8px;"><a href="?demo=1" style="color:inherit;">🔍 まずはサンプルデータで試す</a></p>
     <div class="card">
       <h2>作成者からのメッセージ</h2>
       <p class="note">
@@ -885,8 +885,9 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
   <div class="screen" id="screen-admin-qr">
     <h1>🗂️ 管理者設定</h1>
     <div class="card">
-      <h2>✅ 送信完了：Googleスプレッドシートにデータを書き込みました</h2>
+      <h2>✅ 送信完了</h2>
       <p style="font-weight:700;" id="setup-count-text"></p>
+      <p class="note">下のリンクから、Googleスプレッドシートを確認してください。</p>
       <a class="btn secondary small" id="spreadsheet-link-btn" href="#" target="_blank" rel="noopener">📊 スプレッドシートを開く</a>
     </div>
     <div class="card">
@@ -903,7 +904,7 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
         差異の確認・是正、最終的な結果はGoogleスプレッドシート側（集計・最終リスト シート）で行います。
         取込時点のデータは「元データ」シートに、元ファイルと同じ列構成で数量だけ最終値に置き換えたものは
         「最終（元レイアウト）」シートに自動で反映されます（在庫管理システムへの取込用）。
-        管理者設定はこれで完了しました。
+        管理者設定はこれで完了しました。この後の流れは、スプレッドシートの「使い方」シートで確認してください。
       </p>
     </div>
     <button class="btn secondary" onclick="showScreen('screen-home')">ホームに戻る</button>
@@ -989,6 +990,15 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
     </div>
     <button class="btn" onclick="continueOtherAxis()">続けて別の担当エリアを数える</button>
     <button class="btn secondary" onclick="finishCounter()">この端末での作業を終了する</button>
+  </div>
+
+  <!-- ============ カウント担当者：終了 ============ -->
+  <div class="screen" id="screen-counter-finished">
+    <h1>📱 カウント入力</h1>
+    <div class="card">
+      <h2>お疲れ様でした</h2>
+      <p class="note">棚卸のご協力ありがとうございました。このタブを閉じて終了してください。</p>
+    </div>
   </div>
 
   <p class="note" style="margin-top:24px;">本ツールは自由にご利用いただけます。利用により生じたいかなる損害についても、作成者は一切の責任を負いません。自己責任でご利用ください。</p>
@@ -1708,7 +1718,7 @@ function continueOtherAxis(){
   showScreen('screen-counter-axis');
 }
 function finishCounter(){
-  showScreen('screen-home');
+  showScreen('screen-counter-finished');
 }
 </script>
 </body>
