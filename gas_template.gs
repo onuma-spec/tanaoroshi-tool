@@ -1,6 +1,10 @@
+/** @OnlyCurrentDoc */
 // ============================================================
 // 実地棚卸支援ツール - GASテンプレート
 // ============================================================
+// 先頭の @OnlyCurrentDoc で、権限を「このスプレッドシートだけ」に絞っている
+// （ないと Google ドライブのすべてのスプレッドシートを読み書きできる権限で動く）。
+//
 // 【使い方】
 // 1. 新しいGoogleスプレッドシートを作成する
 // 2. メニュー「拡張機能」→「Apps Script」を開く
@@ -86,6 +90,16 @@ function doPost(e) {
     return jsonOut({ ok: false, error: String(err) });
   }
 }
+
+// 「=」「+」「-」「@」で始まる文字列はシートに数式として書き込まれるため、先頭に ' を付けて文字列として保存する。
+// ただし「-3」「+5」のように数値として読める文字列は付けない（CSV の値は文字列で届くので、数値は数値のまま入れる）。
+// シートから読み戻すと ' は外れるので、読み戻した値を書き直すとき（集計・最終リスト）も必ず通す
+function asText_(v) {
+  if (typeof v !== 'string' || !/^[=+\-@]/.test(v)) return v;
+  if (/^[+\-]/.test(v) && !isNaN(Number(v))) return v;
+  return "'" + v;
+}
+function asTextRow_(row) { return row.map(asText_); }
 
 function jsonOut(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
@@ -181,7 +195,7 @@ function ensureSheet_(ss, name, header) {
     sh.setFrozenRows(1);
   }
   // 既存シートでも、コード側の見出し定義が変わった場合に追従できるよう毎回上書きする
-  sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
+  sh.getRange(1, 1, 1, header.length).setValues([asTextRow_(header)]).setFontWeight('bold');
   return sh;
 }
 
@@ -289,7 +303,7 @@ function setupMaster(body) {
     return [it.key, it.display].concat(axes).concat([Number(it.bookQty) || 0, it.unit || '', JSON.stringify(it.originalRow || [])]);
   });
   if (rows.length > 0) {
-    sh.getRange(2, 1, rows.length, header.length).setValues(rows);
+    sh.getRange(2, 1, rows.length, header.length).setValues(rows.map(asTextRow_));
   }
   trimSheet_(sh, rows.length + 1, header.length);
 
@@ -320,7 +334,7 @@ function writeOriginalDataSheet_(originalHeaders, originalRows) {
   const sh = ensureSheet_(ss, SHEET_ORIGINAL, originalHeaders);
   const clearRows = sh.getMaxRows() - 1;
   if (clearRows > 0) sh.getRange(2, 1, clearRows, originalHeaders.length).clearContent();
-  if (originalRows.length > 0) sh.getRange(2, 1, originalRows.length, originalHeaders.length).setValues(originalRows);
+  if (originalRows.length > 0) sh.getRange(2, 1, originalRows.length, originalHeaders.length).setValues(originalRows.map(asTextRow_));
   trimSheet_(sh, originalRows.length + 1, originalHeaders.length);
 }
 
@@ -344,7 +358,7 @@ function submitCounts(body) {
       return [now, name, it.key].concat(axes).concat([Number(it.qty) || 0, it.memo || '']);
     });
     if (rows.length > 0) {
-      sh.getRange(sh.getLastRow() + 1, 1, rows.length, header.length).setValues(rows);
+      sh.getRange(sh.getLastRow() + 1, 1, rows.length, header.length).setValues(rows.map(asTextRow_));
     }
     trimSheet_(sh, Math.max(sh.getLastRow(), 1), header.length);
     // 集計の再計算もロックを保持したまま行う（複数端末の同時送信による競合を避けるため）
@@ -477,7 +491,7 @@ function recomputeSummary() {
     sumSh.getRange(2, 1, clearRows, sumHeaderLen).clearContent();
   }
   if (outRows.length > 0) {
-    sumSh.getRange(2, 1, outRows.length, sumHeaderLen).setValues(outRows);
+    sumSh.getRange(2, 1, outRows.length, sumHeaderLen).setValues(outRows.map(asTextRow_));
   }
   trimSheet_(sumSh, outRows.length + 1, sumHeaderLen);
 
@@ -555,7 +569,7 @@ function updateFinalList_(outRows, axisLabels, idx) {
     return [idKey, display].concat(axes).concat([unit, finalQty]);
   });
   if (rows.length > 0) {
-    sh.getRange(2, 1, rows.length, header.length).setValues(rows);
+    sh.getRange(2, 1, rows.length, header.length).setValues(rows.map(asTextRow_));
   }
   trimSheet_(sh, rows.length + 1, header.length);
 }
@@ -604,6 +618,6 @@ function updateOriginalLayoutFinal_(outRows, axisLabels, idx) {
 
   const clearRows = sh.getMaxRows() - 1;
   if (clearRows > 0) sh.getRange(2, 1, clearRows, originalHeaders.length).clearContent();
-  if (outSheetRows.length > 0) sh.getRange(2, 1, outSheetRows.length, originalHeaders.length).setValues(outSheetRows);
+  if (outSheetRows.length > 0) sh.getRange(2, 1, outSheetRows.length, originalHeaders.length).setValues(outSheetRows.map(asTextRow_));
   trimSheet_(sh, outSheetRows.length + 1, originalHeaders.length);
 }
